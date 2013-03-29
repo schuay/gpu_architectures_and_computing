@@ -1,11 +1,2 @@
-*.aux
-*.bbl
-*.blg
-*.dvi
-*.log
-*.out
-*.pdf
-*.ps
 *.swp
-*.toc
 *~
