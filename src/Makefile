@@ -94,8 +94,11 @@ build: main
 main.o: main.cu
 	$(NVCC) $(NVCCFLAGS) $(EXTRA_NVCCFLAGS) $(GENCODE_FLAGS) $(INCLUDES) -o $@ -c $<
 
-main: main.o
+util.o: util.c util.h
+	$(GCC) $(CCFLAGS) $(EXTRA_CCFLAGS) $(INCLUDES) -o $@ -c $<
+
+main: main.o util.o
 	$(GCC) $(CCFLAGS) -o $@ $+ $(LDFLAGS) $(EXTRA_LDFLAGS)
 
 clean:
-	rm -f main.o main
+	rm -f main.o util.o main
