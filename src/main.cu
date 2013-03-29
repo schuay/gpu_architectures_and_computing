@@ -21,6 +21,11 @@ _checkCudaError(cudaError_t result, const char *func, const char *file, int line
     }
 }
 
+__global__ void simpleAnd(const float *lhs, const float *rhs, float *result, int nitems)
+{
+	result[0] = 1.f;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -31,6 +36,16 @@ main(int argc, char **argv)
     checkCudaError(cudaMalloc((void **)&d_fs, 64 * sizeof(float)));
 
     checkCudaError(cudaMemcpy(d_fs, fs, 64 * sizeof(float), cudaMemcpyHostToDevice));
+
+    printf("fs[0]: %f\n", fs[0]);
+
+    printf("Launching kernel...\n");
+    simpleAnd<<<1, 1>>>(d_fs, d_fs, d_fs, 64);
+    checkCudaError(cudaDeviceSynchronize());
+
+    checkCudaError(cudaMemcpy(fs, d_fs, 64 * sizeof(float), cudaMemcpyDeviceToHost));
+
+    printf("fs[0]: %f\n", fs[0]);
 
     checkCudaError(cudaFree(d_fs));
     free(fs);
