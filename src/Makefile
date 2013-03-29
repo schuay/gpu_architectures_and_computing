@@ -70,6 +70,9 @@ else
       NVCCFLAGS := -m64
 endif
 
+# Enable debug builds by default
+dbg := 1
+
 # Debug build flags
 ifeq ($(dbg),1)
       CCFLAGS   += -g
