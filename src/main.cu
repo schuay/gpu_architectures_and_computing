@@ -14,6 +14,8 @@ extern "C" {
 
 #define NITEMS (256 * 257)
 
+#define FLOAT_DELTA (0.000000001f)
+
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
 bool
@@ -28,24 +30,36 @@ _checkCudaError(cudaError_t result, const char *func, const char *file, int line
     }
 }
 
-__global__ void simpleAnd(const float *lhs, const float *rhs, float *result, int nitems)
+__global__ void
+simpleAnd(const float *lhs, const float *rhs, float *result, int nitems)
 {
 	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
 	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
-		result[i] = ((lhs[i] + rhs[i]) >= 1.f) ? 1.f : 0.f;
+		result[i] = ((lhs[i] + rhs[i]) >= 2.f - FLOAT_DELTA) ? 1.f : 0.f;
+	}
+}
+
+__global__ void
+simpleOr(const float *lhs, const float *rhs, float *result, int nitems)
+{
+	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
+		result[i] = ((lhs[i] + rhs[i]) >= 1.f - FLOAT_DELTA) ? 1.f : 0.f;
 	}
 }
 
 int
 main(int argc, char **argv)
 {
-    printf("Hello World...\n");
-
     float *a = random_array(42, NITEMS);
     float *b = random_array(43, NITEMS);
     float *c = (float *)calloc(NITEMS, sizeof(float));
     float *devA, *devB, *devC;
+
+    cudaStream_t stream;
+    checkCudaError(cudaStreamCreate(&stream));
 
     checkCudaError(cudaMalloc((void **)&devA, NITEMS * sizeof(float)));
     checkCudaError(cudaMalloc((void **)&devB, NITEMS * sizeof(float)));
@@ -55,7 +69,13 @@ main(int argc, char **argv)
     checkCudaError(cudaMemcpy(devB, b, NITEMS * sizeof(float), cudaMemcpyHostToDevice));
 
     printf("Launching kernel...\n");
-    simpleAnd<<<NBLOCKS, NTHREADS>>>(devA, devB, devC, NITEMS);
+
+    /**
+     * These calls are asynchronous and just queue the pending operations up on the stream.
+     * We can queue our entire operator tree here and run it without interruption from the host.
+     */
+    simpleOr<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devB, devC, NITEMS);
+    simpleAnd<<<NBLOCKS, NTHREADS, 0, stream>>>(devC, devB, devC, NITEMS);
 
     checkCudaError(cudaMemcpy(a, devA, NITEMS * sizeof(float), cudaMemcpyDeviceToHost));
     checkCudaError(cudaMemcpy(b, devB, NITEMS * sizeof(float), cudaMemcpyDeviceToHost));
