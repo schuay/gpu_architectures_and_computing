@@ -5,7 +5,9 @@
 
 #include <cuda_runtime.h>
 
+extern "C" {
 #include "util.h"
+}
 
 #define NBLOCKS (256)
 #define NTHREADS (256)
