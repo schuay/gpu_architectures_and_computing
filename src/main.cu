@@ -40,6 +40,11 @@ simpleAnd(const float *lhs, const float *rhs, float *result, int nitems)
 	}
 }
 
+/* Note that this implementation does not produce the same results for
+ * "not (a and b)" and "(not a or not b)" since "and" requires both
+ * operands to equal 1.f while "or" only checks the operand sum.
+ */
+
 __global__ void
 simpleOr(const float *lhs, const float *rhs, float *result, int nitems)
 {
@@ -47,6 +52,16 @@ simpleOr(const float *lhs, const float *rhs, float *result, int nitems)
 
 	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
 		result[i] = ((lhs[i] + rhs[i]) >= 1.f - FLOAT_DELTA) ? 1.f : 0.f;
+	}
+}
+
+__global__ void
+simpleNot(const float *in, float *result, int nitems)
+{
+	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
+		result[i] = 1.f - in[i];
 	}
 }
 
@@ -73,7 +88,10 @@ main(int argc, char **argv)
     /**
      * These calls are asynchronous and just queue the pending operations up on the stream.
      * We can queue our entire operator tree here and run it without interruption from the host.
+     *
+     * The following sequence computes ((not a or b) and b).
      */
+    simpleNot<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devA, NITEMS);
     simpleOr<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devB, devC, NITEMS);
     simpleAnd<<<NBLOCKS, NTHREADS, 0, stream>>>(devC, devB, devC, NITEMS);
 
