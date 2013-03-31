@@ -14,9 +14,15 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 endif()
 
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --pre-include gcc_cuda_compat.h")
+
 set(SOURCES
     util.c
     main.cu
+)
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 cuda_add_executable(gpuac

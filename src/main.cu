@@ -4,6 +4,8 @@
 #include <math.h>
 
 #include <cuda_runtime.h>
+#include <thrust/device_vector.h>
+#include <thrust/scan.h>
 
 extern "C" {
 #include "util.h"
@@ -65,6 +67,16 @@ simpleNot(const float *in, float *result, int nitems)
 	}
 }
 
+__global__ void
+simpleScan(const float *in, float *result, int nitems)
+{
+	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
+		result[i] = 1.f - in[i];
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -110,6 +122,28 @@ main(int argc, char **argv)
     free(a);
     free(b);
     free(c);
+
+    /* And a Thrust scan operation, let's see how we can integrate that with the rest of
+     * the code...
+     */
+
+    thrust::plus<float> binary_op;
+
+    thrust::host_vector<float> hostVector(NITEMS);
+    thrust::generate(hostVector.begin(), hostVector.end(), rand);
+
+    thrust::device_vector<float> deviceVector = hostVector;
+    thrust::exclusive_scan(deviceVector.begin(), deviceVector.end(), deviceVector.begin(), 0.f, binary_op);
+
+    thrust::copy(deviceVector.begin(), deviceVector.end(), hostVector.begin());
+
+    for (thrust::device_vector<float>::iterator iter = deviceVector.begin();
+         iter != deviceVector.begin() + 10;
+         iter++) {
+    	float val = *iter;
+    	printf("%f ", val);
+    }
+    printf("\n");
 
     return 0;
 }
