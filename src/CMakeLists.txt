@@ -8,6 +8,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(CUDA REQUIRED)
+find_package(FLEX REQUIRED)
+find_package(BISON REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_definitions("-Wextra -pedantic -Wno-long-long")
@@ -15,6 +17,25 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --pre-include gcc_cuda_compat.h")
+
+# Parser generation
+
+bison_target(Parser parse.y ${CMAKE_CURRENT_BINARY_DIR}/parse.cpp)
+flex_target(Scanner scan.l ${CMAKE_CURRENT_BINARY_DIR}/scan.cpp)
+add_flex_bison_dependency(Scanner Parser)
+
+message(${BISON_Parser_OUTPUT_HEADER})
+
+add_executable(tempParser
+    ${BISON_Parser_OUTPUTS}
+    ${FLEX_Scanner_OUTPUTS}
+)
+
+target_link_libraries(tempParser
+    ${FLEX_LIBRARIES}
+)
+
+# The main CUDA binary
 
 set(SOURCES
     util.c
