@@ -44,13 +44,16 @@ comp_op     :   '<'
             |   GREATEREQ
             ;
 unary_op    :   NOT
+            |   EV '_' '[' FLOAT ',' FLOAT ']'
             |   EV
+            |   ALW '_' '[' FLOAT ',' FLOAT ']'
             |   ALW
-            ;   /* Bounded temporal operators left out. */
+            ;
 binary_op   :   OR
             |   AND
+            |   UNTIL '_' '[' FLOAT ',' FLOAT ']'
             |   UNTIL
-            ;   /* Bounded temporal operators left out. */
+            ;
 
 %%
 

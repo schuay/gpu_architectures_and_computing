@@ -21,7 +21,7 @@ float               {digit}+.{digit}*
 identifier_body     ({letter}|{digit})
 identifier          {letter}{identifier_body}*
 whitespace          [ \t\n]
-lexem               [()<>,\]\[]
+lexem               [_()<>,\]\[]
 
     int errors = 0;
 %%
