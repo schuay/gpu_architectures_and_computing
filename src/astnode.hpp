@@ -15,8 +15,12 @@ public:
 class UnaryOpNode : public ASTNode
 {
 public:
-    UnaryOpNode(const char * type, ASTNode *expr) :
-        ASTNode(type), expr(expr)
+    UnaryOpNode(const char *type) :
+        ASTNode(type)
+    { }
+
+    UnaryOpNode(const char *type, int lower_bound, int upper_bound) :
+        ASTNode(type), lower_bound(lower_bound), upper_bound(upper_bound)
     { }
 
     void print(int level) {
@@ -24,14 +28,19 @@ public:
         expr->print(level + 1);
     }
 
+    int lower_bound, upper_bound;
     ASTNode *expr;
 };
 
 class BinaryOpNode : public ASTNode
 {
 public:
-    BinaryOpNode(const char * type, ASTNode *lhs, ASTNode *rhs) :
-        ASTNode(type), lhs(lhs), rhs(rhs)
+    BinaryOpNode(const char *type) :
+        ASTNode(type)
+    { }
+
+    BinaryOpNode(const char *type, int lower_bound, int upper_bound) :
+        ASTNode(type), lower_bound(lower_bound), upper_bound(upper_bound)
     { }
 
     void print(int level) {
@@ -40,13 +49,14 @@ public:
         rhs->print(level + 1);
     }
 
+    int lower_bound, upper_bound;
     ASTNode *lhs, *rhs;
 };
 
 class IdentNode : public ASTNode
 {
 public:
-    IdentNode(const char * type, const char * ident) :
+    IdentNode(const char *type, const char *ident) :
         ASTNode(type), ident(ident)
     { }
 
@@ -56,7 +66,7 @@ public:
 class FloatNode : public ASTNode
 {
 public:
-    FloatNode(const char * type, float value) :
+    FloatNode(const char *type, float value) :
         ASTNode(type), value(value)
     { }
 

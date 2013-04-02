@@ -35,12 +35,15 @@ formula     :   phi_expr
             ;
 phi_expr    :   pred_expr
             |   unary_op phi_expr
-                    { $<node>$ = new UnaryOpNode($<name>1, $<node>2); }
+                    { UnaryOpNode *n = (UnaryOpNode *)$<node>1;
+                      n->expr = $<node>2; $<node>$ = n; }
             |   '(' phi_expr ')' binary_op '(' phi_expr ')'
-                    { $<node>$ = new BinaryOpNode($<name>4, $<node>2, $<node>6); }
+                    { BinaryOpNode *n = (BinaryOpNode *)$<node>4;
+                      n->lhs = $<node>2; n->rhs = $<node>6; $<node>$ = n; }
             ;
 pred_expr   :   mat_expr comp_op mat_expr
-                    { $<node>$ = new BinaryOpNode($<name>2, $<node>1, $<node>3); }
+                    { BinaryOpNode *n = (BinaryOpNode *)$<node>2;
+                      n->lhs = $<node>1; n->rhs = $<node>3; $<node>$ = n; }
             ;   /* Other pred_expr forms left out. */
 mat_expr    :   IDENT
                     { $<node>$ = new IdentNode("ident", $<name>1); }
@@ -48,33 +51,33 @@ mat_expr    :   IDENT
                     { $<node>$ = new FloatNode("float", $<val>1); }
             ;   /* We don't support any arithmetic at the moment. */
 comp_op     :   '<'
-                    { $<name>$ = "<"; }
+                    { $<node>$ = new BinaryOpNode("<"); }
             |   '>'
-                    { $<name>$ = ">"; }
+                    { $<node>$ = new BinaryOpNode(">"); }
             |   LESSEQ
-                    { $<name>$ = "<="; }
+                    { $<node>$ = new BinaryOpNode("<="); }
             |   GREATEREQ
-                    { $<name>$ = ">="; }
+                    { $<node>$ = new BinaryOpNode(">="); }
             ;
 unary_op    :   NOT
-                    { $<name>$ = "not"; }
+                    { $<node>$ = new UnaryOpNode("not"); }
             |   EV '_' '[' FLOAT ',' FLOAT ']'
-                    { $<name>$ = "ev"; }
+                    { $<node>$ = new UnaryOpNode("ev", $<val>4, $<val>6); }
             |   EV
-                    { $<name>$ = "ev"; }
+                    { $<node>$ = new UnaryOpNode("ev"); }
             |   ALW '_' '[' FLOAT ',' FLOAT ']'
-                    { $<name>$ = "alw"; }
+                    { $<node>$ = new UnaryOpNode("alw", $<val>4, $<val>6); }
             |   ALW
-                    { $<name>$ = "alw"; }
+                    { $<node>$ = new UnaryOpNode("alw"); }
             ;
 binary_op   :   OR
-                    { $<name>$ = "or"; }
+                    { $<node>$ = new BinaryOpNode("or"); }
             |   AND
-                    { $<name>$ = "and"; }
+                    { $<node>$ = new BinaryOpNode("and"); }
             |   UNTIL '_' '[' FLOAT ',' FLOAT ']'
-                    { $<name>$ = "until"; }
+                    { $<node>$ = new BinaryOpNode("until", $<val>4, $<val>6); }
             |   UNTIL
-                    { $<name>$ = "until"; }
+                    { $<node>$ = new BinaryOpNode("until"); }
             ;
 
 %%
