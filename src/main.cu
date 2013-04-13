@@ -59,7 +59,8 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
 #define FLAG_DEL (1 << 3)
 
 typedef struct {
-    float t;
+    float t;    /**< The time value. */
+    int i;      /**< The original index. */
     int flags;
 } seqpt_t;
 
@@ -80,7 +81,9 @@ time_seq_with_proto_intersections(const sigpt_t *in, seqpt_t *out, int n)
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         float t = in[i].t;
         out[i * 2].t = t;
+        out[i * 2].i = i;
         out[i * 2 + 1].t = t;
+        out[i * 2 + 1].i = i;
         out[i * 2 + 1].flags |= FLAG_ISC;
     }
 }
@@ -116,7 +119,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
 
-    seqpt_t seqinit = { 0.f, FLAG_LHS };
+    seqpt_t seqinit = { 0.f, 0, FLAG_LHS };
     thrust::device_vector<seqpt_t> lhst(lhs.size() * 2, seqinit);
     seqpt_t *ptr_lhst = thrust::raw_pointer_cast(lhst.data());
 
@@ -142,9 +145,9 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
             seqpt_less());
 
     for (thrust::device_vector<seqpt_t>::iterator iter = ts.begin();
-         iter != ts.begin() + 10; iter++) {
+         iter != ts.begin() + 20; iter++) {
     	seqpt_t s = *iter;
-    	printf("{ %f, %x }\n", s.t, s.flags);
+    	printf("{ %f, %d, %x }\n", s.t, s.i, s.flags);
     }
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
