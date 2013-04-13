@@ -53,6 +53,16 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
     }
 }
 
+#define FLAG_LHS (1 << 0)
+#define FLAG_LHS (1 << 1)
+#define FLAG_ISC (1 << 2)
+#define FLAG_DEL (1 << 3)
+
+typedef struct {
+    float t;
+    int flags;
+} seqpt_t;
+
 struct sigpt_less : public thrust::binary_function<sigpt_t, sigpt_t, bool>
 {
     __host__ __device__ bool
@@ -94,6 +104,19 @@ stl_and(const thrust::device_vector<sigpt_t> lhs,
             rhs.begin(), rhs.end(),
             ts.begin(),
             sigpt_less());
+
+    /* The previous code demonstrates how to do a merge with thrust. 
+     * What we could now do is create two vectors of seqpt_t lhst, rhst such that
+     * lhst[0] ~ lhs[0], flagged LHS; lhst[1] ~ lhs[0], flagged ISC (intersection),
+     * lhst[2] ~ lhs[1], ...
+     * We then merge both of these vectors.
+     * Next, we go through and fill in ISC elements; if there's an intersection
+     * we set the time accordingly, and if there isn't, we mark it as DEL.
+     * An intersection must always be between the latest (lhs, rhs) and the next such
+     * pair.
+     * Then, mark duplicate time values DEL.
+     * Finally we compact the array, removing all DEL elements.
+     */
 }
 
 int
