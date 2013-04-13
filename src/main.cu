@@ -5,6 +5,8 @@
 
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
+#include <thrust/functional.h>
+#include <thrust/merge.h>
 #include <thrust/scan.h>
 
 extern "C" {
@@ -17,6 +19,9 @@ extern "C" {
 #define NITEMS (256 * 257)
 
 #define FLOAT_DELTA (0.000000001f)
+
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define CUDA_MAX(a, b) (((a) > (b)) * (a) + ((a) <= (b)) * (b))
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
@@ -32,6 +37,9 @@ _checkCudaError(cudaError_t result, const char *func, const char *file, int line
     }
 }
 
+/**
+ * sizeof(out) == sizeof(in).
+ */
 __global__ void
 stl_not(const sigpt_t *in, sigpt_t *out, int n)
 {
@@ -45,47 +53,61 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
     }
 }
 
+struct sigpt_less : public thrust::binary_function<sigpt_t, sigpt_t, bool>
+{
+    __host__ __device__ bool
+    operator()(const sigpt_t &lhs, const sigpt_t &rhs) const
+    {
+        return lhs.t < rhs.t;
+    }
+};
+
+/**
+ * sizeof(out) = 4 * max(sizeof(lhs), sizeof(rhs)).
+ */
+void
+stl_and(const thrust::device_vector<sigpt_t> lhs,
+        const thrust::device_vector<sigpt_t> rhs,
+        thrust::device_vector<sigpt_t> out)
+{
+    /* Construct a sorted time sequence ts which contains all t <- lhs, all t <- rhs, and all
+     * intersection points between lhs and rhs. The sequence contains only unique points.
+     * 
+     * Using interpolation, construct lhs' and rhs' such that they contain all t <- ts.
+     *
+     * Finally, do a simple min() over these arrays.
+     *
+     * We need:
+     * * efficient interpolation
+     * * a parallel merge. bitonic sort? a binary sort merge? preserve information of
+     *   source array and source pointer so we can do intersections later. how to get memory
+     *   for all of these additional fields?
+     * * a parallel method to find all intersection points. we can use the merged section,
+     *   but this is also not as simple as it seems at first.
+     */
+
+    const int nts = 4 * MAX(lhs.size(), rhs.size());
+    sigpt_t init = { 0.f, 0.f, 0.f };
+    thrust::device_vector<sigpt_t> ts(nts, init);
+
+    thrust::merge(lhs.begin(), lhs.end(),
+            rhs.begin(), rhs.end(),
+            ts.begin(),
+            sigpt_less());
+}
+
 int
 main(int argc, char **argv)
 {
     sigpt_t *a = sigpt_random(42, NITEMS);
     sigpt_t *b = sigpt_random(43, NITEMS);
-    sigpt_t *c = (sigpt_t *)calloc(NITEMS, sizeof(sigpt_t));
-    sigpt_t *devA, *devB, *devC;
+    sigpt_t *c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
 
-    cudaStream_t stream;
-    checkCudaError(cudaStreamCreate(&stream));
+    thrust::device_vector<sigpt_t> lhs(a, a + NITEMS);
+    thrust::device_vector<sigpt_t> rhs(b, b + NITEMS);
+    thrust::device_vector<sigpt_t> out(c, c + 4 * NITEMS);
 
-    checkCudaError(cudaMalloc((void **)&devA, NITEMS * sizeof(sigpt_t)));
-    checkCudaError(cudaMalloc((void **)&devB, NITEMS * sizeof(sigpt_t)));
-    checkCudaError(cudaMalloc((void **)&devC, NITEMS * sizeof(sigpt_t)));
-
-    checkCudaError(cudaMemcpy(devA, a, NITEMS * sizeof(sigpt_t), cudaMemcpyHostToDevice));
-    checkCudaError(cudaMemcpy(devB, b, NITEMS * sizeof(sigpt_t), cudaMemcpyHostToDevice));
-
-    printf("Launching kernel...\n");
-
-    /**
-     * These calls are asynchronous and just queue the pending operations up on the stream.
-     * We can queue our entire operator tree here and run it without interruption from the host.
-     *
-     * The following sequence computes ((not a or b) and b).
-     */
-    stl_not<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devB, NITEMS);
-
-    checkCudaError(cudaMemcpy(a, devA, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
-    checkCudaError(cudaMemcpy(b, devB, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
-    checkCudaError(cudaMemcpy(c, devC, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
-
-    for (int i = 0; i < 20; i++) {
-        printf("not { %f, %f, %f } = { %f, %f, %f }\n",
-                a[i].t, a[i].y, a[i].dy,
-                b[i].t, b[i].y, b[i].dy);
-    }
-
-    checkCudaError(cudaFree(devA));
-    checkCudaError(cudaFree(devB));
-    checkCudaError(cudaFree(devC));
+    stl_and(lhs, rhs, out);
 
     free(a);
     free(b);
