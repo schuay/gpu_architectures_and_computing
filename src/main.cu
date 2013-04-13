@@ -8,7 +8,7 @@
 #include <thrust/scan.h>
 
 extern "C" {
-#include "util.h"
+#include "sigpt.h"
 }
 
 #define NBLOCKS (256)
@@ -33,67 +33,35 @@ _checkCudaError(cudaError_t result, const char *func, const char *file, int line
 }
 
 __global__ void
-simpleAnd(const float *lhs, const float *rhs, float *result, int nitems)
+stl_not(const sigpt_t *in, sigpt_t *out, int n)
 {
-	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
-		result[i] = ((lhs[i] + rhs[i]) >= 2.f - FLOAT_DELTA) ? 1.f : 0.f;
-	}
-}
-
-/* Note that this implementation does not produce the same results for
- * "not (a and b)" and "(not a or not b)" since "and" requires both
- * operands to equal 1.f while "or" only checks the operand sum.
- */
-
-__global__ void
-simpleOr(const float *lhs, const float *rhs, float *result, int nitems)
-{
-	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
-		result[i] = ((lhs[i] + rhs[i]) >= 1.f - FLOAT_DELTA) ? 1.f : 0.f;
-	}
-}
-
-__global__ void
-simpleNot(const float *in, float *result, int nitems)
-{
-	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
-		result[i] = 1.f - in[i];
-	}
-}
-
-__global__ void
-simpleScan(const float *in, float *result, int nitems)
-{
-	const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-	for (int i = tid; i < nitems; i += blockDim.x * gridDim.x) {
-		result[i] = 1.f - in[i];
-	}
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        sigpt_t s = in[i];
+        s.y *= -1.f;
+        s.dy *= -1.f;
+        out[i] = s;
+    }
 }
 
 int
 main(int argc, char **argv)
 {
-    float *a = random_array(42, NITEMS);
-    float *b = random_array(43, NITEMS);
-    float *c = (float *)calloc(NITEMS, sizeof(float));
-    float *devA, *devB, *devC;
+    sigpt_t *a = sigpt_random(42, NITEMS);
+    sigpt_t *b = sigpt_random(43, NITEMS);
+    sigpt_t *c = (sigpt_t *)calloc(NITEMS, sizeof(sigpt_t));
+    sigpt_t *devA, *devB, *devC;
 
     cudaStream_t stream;
     checkCudaError(cudaStreamCreate(&stream));
 
-    checkCudaError(cudaMalloc((void **)&devA, NITEMS * sizeof(float)));
-    checkCudaError(cudaMalloc((void **)&devB, NITEMS * sizeof(float)));
-    checkCudaError(cudaMalloc((void **)&devC, NITEMS * sizeof(float)));
+    checkCudaError(cudaMalloc((void **)&devA, NITEMS * sizeof(sigpt_t)));
+    checkCudaError(cudaMalloc((void **)&devB, NITEMS * sizeof(sigpt_t)));
+    checkCudaError(cudaMalloc((void **)&devC, NITEMS * sizeof(sigpt_t)));
 
-    checkCudaError(cudaMemcpy(devA, a, NITEMS * sizeof(float), cudaMemcpyHostToDevice));
-    checkCudaError(cudaMemcpy(devB, b, NITEMS * sizeof(float), cudaMemcpyHostToDevice));
+    checkCudaError(cudaMemcpy(devA, a, NITEMS * sizeof(sigpt_t), cudaMemcpyHostToDevice));
+    checkCudaError(cudaMemcpy(devB, b, NITEMS * sizeof(sigpt_t), cudaMemcpyHostToDevice));
 
     printf("Launching kernel...\n");
 
@@ -103,16 +71,16 @@ main(int argc, char **argv)
      *
      * The following sequence computes ((not a or b) and b).
      */
-    simpleNot<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devA, NITEMS);
-    simpleOr<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devB, devC, NITEMS);
-    simpleAnd<<<NBLOCKS, NTHREADS, 0, stream>>>(devC, devB, devC, NITEMS);
+    stl_not<<<NBLOCKS, NTHREADS, 0, stream>>>(devA, devB, NITEMS);
 
-    checkCudaError(cudaMemcpy(a, devA, NITEMS * sizeof(float), cudaMemcpyDeviceToHost));
-    checkCudaError(cudaMemcpy(b, devB, NITEMS * sizeof(float), cudaMemcpyDeviceToHost));
-    checkCudaError(cudaMemcpy(c, devC, NITEMS * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaError(cudaMemcpy(a, devA, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
+    checkCudaError(cudaMemcpy(b, devB, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
+    checkCudaError(cudaMemcpy(c, devC, NITEMS * sizeof(sigpt_t), cudaMemcpyDeviceToHost));
 
     for (int i = 0; i < 20; i++) {
-    	printf("%f & %f = %f\n", a[i], b[i], c[i]);
+        printf("not { %f, %f, %f } = { %f, %f, %f }\n",
+                a[i].t, a[i].y, a[i].dy,
+                b[i].t, b[i].y, b[i].dy);
     }
 
     checkCudaError(cudaFree(devA));
@@ -126,6 +94,8 @@ main(int argc, char **argv)
     /* And a Thrust scan operation, let's see how we can integrate that with the rest of
      * the code...
      */
+
+    /*
 
     thrust::plus<float> binary_op;
 
@@ -144,6 +114,8 @@ main(int argc, char **argv)
     	printf("%f ", val);
     }
     printf("\n");
+
+    */
 
     return 0;
 }

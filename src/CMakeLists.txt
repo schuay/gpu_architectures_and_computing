@@ -38,7 +38,7 @@ target_link_libraries(tempParser
 # The main CUDA binary
 
 set(SOURCES
-    util.c
+    sigpt.c
     main.cu
 )
 
