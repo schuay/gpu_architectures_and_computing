@@ -102,18 +102,45 @@ time_seq_with_proto_intersections(const sigpt_t *in, seqpt_t *out, int n)
 }
 
 __global__ void
-calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs, seqpt_t *ts, int n)
+calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
+                            const int *lhs_max, const int *rhs_max,
+                            seqpt_t *ts, int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     /* At this point, we are only interested in intersection elements in ts.
-     * These are located at every index 2 * i + 1, i <- N. */
+     * These are located at every index 2 * i + 1, i <- N.
+     *
+     * Assuming ts.flags ~ FLAG_LHS: ts[i].i is the index of the current
+     * point in lhs (the next point is obviously lhs[ts[i].i + 1]).
+     * The closest point to the left in in rhs is located at index
+     * rhs_max[i], and the closest to the right is rhs_max[i] + 1.
+     *
+     * This is enough information to determine the time of the signal 
+     * intersection.
+     */
 
     for (int i = tid; 2 * i + 1 < n; i += blockDim.x * gridDim.x) {
         const int ii = 2 * i + 1;
         seqpt_t s = ts[ii];
 
-        /* TODO: Continue here. */
+        const int is_lhs = (s.flags & FLAG_LHS) != 0;
+        const int is_rhs = !is_lhs;
+
+        const sigpt_t *this_sig = is_lhs * lhs + is_rhs * rhs;
+        const sigpt_t *other_sig = is_lhs * rhs + is_rhs * lhs;
+        const int *other_sig_max = is_lhs * lhs_max + is_rhs * rhs_max;
+
+        /* We now have four points corresponding to the end points of the
+         * two line segments. (x1, y1) and (x2, y2) for one line segment,
+         * (x3, y3) and (x4, y4) for the other line segment.
+         * We are interested in the x coordinate of the intersection:
+         * x = ((x1y2 - y1x2)(x3 - x4) - (x1 - x2)(x3y4 - y3x4)) /
+         *     ((x1 - x2)(y3 - y4) - (y1 - y2)(x3 - x4)).
+         * If the denominator is 0, the lines are parallel. We only
+         * care about intersections in a specific interval - if 
+         * there is none, we mark the element with FLAG_DEL.
+         */
     }
 }
 
@@ -199,7 +226,10 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * pair.
      */
 
-    calculate_intersection_seqs<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_ts, ts.size());
+    calculate_intersection_seqs<<<NBLOCKS, NTHREADS>>>(
+            ptr_lhs, ptr_rhs, 
+            ptr_lhs_max, ptr_rhs_max,
+            ptr_ts, nts);
 
     int i = 0;
     for (thrust::device_vector<seqpt_t>::iterator iter = ts.begin();
