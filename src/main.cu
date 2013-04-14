@@ -125,11 +125,11 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
         seqpt_t s = ts[ii];
 
         const int is_lhs = (s.flags & FLAG_LHS) != 0;
-        const int is_rhs = !is_lhs;
 
-        const sigpt_t *this_sig = is_lhs * lhs + is_rhs * rhs;
-        const sigpt_t *other_sig = is_lhs * rhs + is_rhs * lhs;
-        const int *other_sig_max = is_lhs * lhs_max + is_rhs * rhs_max;
+        /* TODO: Optimize. */
+        const sigpt_t *this_sig = is_lhs ? lhs : rhs;
+        const sigpt_t *other_sig = is_lhs ? rhs : lhs;
+        const int *other_sig_max = is_lhs ? lhs_max : rhs_max;
 
         /* We now have four points corresponding to the end points of the
          * two line segments. (x1, y1) and (x2, y2) for one line segment,
@@ -141,6 +141,32 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
          * care about intersections in a specific interval - if 
          * there is none, we mark the element with FLAG_DEL.
          */
+
+        const sigpt_t p1 = this_sig[s.i];
+        const sigpt_t p2 = this_sig[s.i + 1]; /* TODO: Range checks! */
+        const sigpt_t p3 = other_sig[other_sig_max[i]];
+        const sigpt_t p4 = other_sig[other_sig_max[i] + 1]; /* TODO: Range checks! */
+
+        const float denom = (p1.t - p2.t) * (p3.y - p4.y) -
+                            (p1.y - p2.y) * (p3.t - p4.t);
+        const float numer = (p1.t * p2.y - p1.y * p2.t) * (p3.t - p4.t) -
+                            (p1.t - p2.t) * (p3.t * p4.y - p3.y * p4.t);
+
+        /* Lines parallel? */
+        if (denom == 0.f) {
+            ts[ii].flags |= FLAG_DEL;
+            continue; /* TODO: Optimize */
+        }
+
+        const float t = numer / denom;
+
+        /* Intersection outside of line segment range? */
+        if (t <= p1.t || t >= p2.t) {
+            ts[ii].flags |= FLAG_DEL;
+            continue; /* TODO: Optimize */
+        }
+
+        ts[ii].t = t;
     }
 }
 
