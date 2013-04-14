@@ -61,6 +61,7 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
 typedef struct {
     float t;    /**< The time value. */
     int i;      /**< The original index. */
+    int i_lhs, i_rhs;
     int flags;
 } seqpt_t;
 
@@ -74,6 +75,18 @@ struct seqpt_less : public thrust::binary_function<seqpt_t, seqpt_t, bool>
 };
 
 __global__ void
+extract_i(const seqpt_t *in, int *out, int n, int flag)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        seqpt_t s = in[i];
+        const int has_flag = (s.flags & flag) != 0;
+        out[i] = has_flag * s.i;
+    }
+}
+
+__global__ void
 time_seq_with_proto_intersections(const sigpt_t *in, seqpt_t *out, int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -85,6 +98,22 @@ time_seq_with_proto_intersections(const sigpt_t *in, seqpt_t *out, int n)
         out[i * 2 + 1].t = t;
         out[i * 2 + 1].i = i;
         out[i * 2 + 1].flags |= FLAG_ISC;
+    }
+}
+
+__global__ void
+calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs, seqpt_t *ts, int n)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    /* At this point, we are only interested in intersection elements in ts.
+     * These are located at every index 2 * i + 1, i <- N. */
+
+    for (int i = tid; 2 * i + 1 < n; i += blockDim.x * gridDim.x) {
+        const int ii = 2 * i + 1;
+        seqpt_t s = ts[ii];
+
+        /* TODO: Continue here. */
     }
 }
 
@@ -119,7 +148,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
 
-    seqpt_t seqinit = { 0.f, 0, FLAG_LHS };
+    seqpt_t seqinit = { 0.f, 0, 0, 0, FLAG_LHS };
     thrust::device_vector<seqpt_t> lhst(lhs.size() * 2, seqinit);
     seqpt_t *ptr_lhst = thrust::raw_pointer_cast(lhst.data());
 
@@ -144,17 +173,44 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
             ts.begin(),
             seqpt_less());
 
-    for (thrust::device_vector<seqpt_t>::iterator iter = ts.begin();
-         iter != ts.begin() + 20; iter++) {
-    	seqpt_t s = *iter;
-    	printf("{ %f, %d, %x }\n", s.t, s.i, s.flags);
-    }
+    /* Now, for every proto intersection of side s <- { lhs, rhs }, we need to
+     * find the index of the element to its immediate left of the opposing side.
+     */ 
+
+    seqpt_t *ptr_ts = thrust::raw_pointer_cast(ts.data());
+
+    thrust::device_vector<int> lhs_max(nts, 0);
+    int *ptr_lhs_max = thrust::raw_pointer_cast(lhs_max.data());
+    extract_i<<<NBLOCKS, NTHREADS>>>(ptr_ts, ptr_lhs_max, nts, FLAG_LHS);
+
+    thrust::inclusive_scan(lhs_max.begin(), lhs_max.end(), lhs_max.begin(),
+                           thrust::maximum<int>());
+
+    thrust::device_vector<int> rhs_max(nts, 0);
+    int *ptr_rhs_max = thrust::raw_pointer_cast(rhs_max.data());
+    extract_i<<<NBLOCKS, NTHREADS>>>(ptr_ts, ptr_rhs_max, nts, FLAG_RHS);
+
+    thrust::inclusive_scan(rhs_max.begin(), rhs_max.end(), rhs_max.begin(),
+                           thrust::maximum<int>());
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
      * we set the time accordingly, and if there isn't, we mark it as DEL.
      * An intersection must always be between the latest (lhs, rhs) and the next such
      * pair.
-     * Then, mark duplicate time values DEL.
+     */
+
+    calculate_intersection_seqs<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_ts, ts.size());
+
+    int i = 0;
+    for (thrust::device_vector<seqpt_t>::iterator iter = ts.begin();
+         iter != ts.begin() + 40; iter++) {
+    	seqpt_t s = *iter;
+        int j = lhs_max[i];
+        int k = rhs_max[i++];
+    	printf("{ %f, %d, %d, %d, %x }\n", s.t, s.i, j, k, s.flags);
+    }
+
+    /* Then, mark duplicate time values DEL.
      * Finally we compact the array, removing all DEL elements.
      */
 }
