@@ -93,6 +93,20 @@ struct sigpt_min : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
 };
 
 __global__ void
+sigpt_extrapolate(const sigpt_t *lhs,
+                  const sigpt_t *rhs,
+                  const int *lhs_max,
+                  const int *rhs_max,
+                  const seqpt_t *ts,
+                  sigpt_t *lhs_extrapolated,
+                  sigpt_t *rhs_extrapolated)
+{
+    /* TODO: Use the information provided by lhs, rhs, lhs_max, rhs_max, and ts
+     * to extrapolated a signal point sequence for both lhs and rhs for each
+     * time point in ts. */
+}
+
+__global__ void
 extract_i(const seqpt_t *in, int *out, int n, int flag)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -312,7 +326,14 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::device_vector<sigpt_t> lhs_extrapolated(ts.size(), sigpt_init);
     thrust::device_vector<sigpt_t> rhs_extrapolated(ts.size(), sigpt_init);
 
-    /* TODO */
+    sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(
+            ptr_lhs,
+            ptr_rhs,
+            ptr_lhs_max,
+            ptr_rhs_max,
+            ptr_ts,
+            thrust::raw_pointer_cast(lhs_extrapolated.data()),
+            thrust::raw_pointer_cast(rhs_extrapolated.data()));
 
     /* And *finally* run the actual and operator. */
 
