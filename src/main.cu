@@ -161,7 +161,7 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
         const float t = numer / denom;
 
         /* Intersection outside of line segment range? */
-        if (t <= p1.t || t >= p2.t) {
+        if (t <= p1.t || t >= p2.t || t <= p3.t || t >= p4.t) {
             ts[ii].flags |= FLAG_DEL;
             continue; /* TODO: Optimize */
         }
