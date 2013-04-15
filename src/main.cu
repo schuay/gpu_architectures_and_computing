@@ -271,6 +271,100 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      */
 }
 
+// FIXME: Dirty hack, so the scan does the scattering for us.
+struct sigpt_double {
+    sigpt_t left;
+    sigpt_t right;
+};
+struct sigpt_left : public sigpt_double {
+    __device__ __host__ sigpt_left(const sigpt_t &a) { sigpt_double::left = a; };
+    __device__ __host__ sigpt_left(void) {};
+    __device__ __host__ operator sigpt_t(void) const { return left; };
+};
+struct sigpt_right : public sigpt_double {
+    __device__ __host__ sigpt_right(const sigpt_t &a) { sigpt_double::right = a; };
+    __device__ __host__ sigpt_right(void) {};
+    __device__ __host__ operator sigpt_t(void) const { return right; };
+};
+
+struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
+{
+    __device__ sigpt_t
+    operator()(const sigpt_t &lhs, const sigpt_t &rhs) const
+    {
+        /*sigpt_t ret;
+        if (lhs.y > rhs.y) {
+            ret.y = lhs.y;
+        } else {
+            ret.y = rhs.y;
+        }
+
+        // Keep the time.
+        ret.t = rhs.t;
+
+        return ret;*/
+
+        return (sigpt_t) {rhs.t, CUDA_MAX(lhs.y, rhs.y), 0};
+    }
+};
+
+__global__ void
+eventually_intersect(const sigpt_t *ys, sigpt_left *zs, char *cs, int n)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        cs[i * 2] = 1;
+        // FIXME: Branches are bad.
+        if (i < n - 1 && zs[i].left.y > zs[i + 1].left.y) {
+            cs[i * 2 + 1] = 1;
+            zs[i].right.t = 7; // TODO: interpolation stuff
+            zs[i].right.y = zs[i+1].left.y;
+        }
+    }
+}
+
+__global__ void
+eventually_compact(const sigpt_t *zs, sigpt_t *zs_final, const char *cs, const size_t *fs, int n)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        // FIXME: Branches are bad.
+        if (cs[i] == 1) {
+            zs_final[fs[i]] = zs[i];
+        }
+    }
+}
+
+/**
+ * sizeof(out) = 2 * sizeof(in).
+ */
+void
+stl_eventually(const thrust::device_vector<sigpt_t> &in,
+        thrust::device_vector<sigpt_t> &out)
+{
+    thrust::device_vector<sigpt_left> out_scan(in.size());
+    thrust::inclusive_scan(in.crbegin(), in.crend(), out_scan.rbegin(), sigpt_max()); 
+
+    const sigpt_t *ys = thrust::raw_pointer_cast(in.data());
+
+    sigpt_left *zs_double = thrust::raw_pointer_cast(out_scan.data());
+    thrust::device_vector<char> used(in.size() * 2, 0);
+    char *cs = thrust::raw_pointer_cast(used.data());
+    eventually_intersect<<<NBLOCKS, NTHREADS>>>(ys, zs_double, cs, in.size());
+
+    thrust::device_vector<size_t> positions(in.size() * 2, 0);
+    thrust::exclusive_scan(used.cbegin(), used.cend(), positions.begin(), 0, thrust::plus<size_t>()); 
+
+    sigpt_t *zs = (sigpt_t *) thrust::raw_pointer_cast(out_scan.data());
+    sigpt_t *zs_final = thrust::raw_pointer_cast(out.data());
+    size_t *fs = thrust::raw_pointer_cast(positions.data());
+    eventually_compact<<<NBLOCKS, NTHREADS>>>(zs, zs_final, cs, fs, in.size() * 2);
+
+    out.resize(positions.back());
+}
+
 int
 main(int argc, char **argv)
 {
