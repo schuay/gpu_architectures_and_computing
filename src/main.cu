@@ -8,6 +8,7 @@
 #include <thrust/functional.h>
 #include <thrust/merge.h>
 #include <thrust/scan.h>
+#include <thrust/unique.h>
 
 extern "C" {
 #include "sigpt.h"
@@ -170,6 +171,16 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
     }
 }
 
+struct seqpt_same_time : public thrust::binary_function<seqpt_t, seqpt_t, bool>
+{
+    __device__ bool
+    operator()(const seqpt_t &lhs, const seqpt_t &rhs) const
+    {
+        return abs(lhs.t - rhs.t) < FLOAT_DELTA;
+    }
+};
+
+
 /**
  * sizeof(out) = 4 * max(sizeof(lhs), sizeof(rhs)).
  */
@@ -216,6 +227,9 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     time_seq_with_proto_intersections<<<NBLOCKS, NTHREADS>>>(ptr_rhs, ptr_rhst, rhs.size());
 
+    /* TODO: To avoid having out-of-order time points later on, we need to remove
+     * duplicate elements before inserting proto intersections. */
+
     /* We then merge both of these vectors. */
 
     const int nts = lhst.size() + rhst.size();
@@ -257,6 +271,12 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
             ptr_lhs_max, ptr_rhs_max,
             ptr_ts, nts);
 
+    /* Then, mark duplicate time values DEL.
+     * Finally we compact the array, removing all DEL elements.
+     */
+
+    thrust::unique(ts.begin(), ts.end(), seqpt_same_time());
+
     int i = 0;
     for (thrust::device_vector<seqpt_t>::iterator iter = ts.begin();
          iter != ts.begin() + 40; iter++) {
@@ -265,10 +285,6 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
         int k = rhs_max[i++];
     	printf("{ %f, %d, %d, %d, %x }\n", s.t, s.i, j, k, s.flags);
     }
-
-    /* Then, mark duplicate time values DEL.
-     * Finally we compact the array, removing all DEL elements.
-     */
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
