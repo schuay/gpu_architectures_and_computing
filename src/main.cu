@@ -75,6 +75,23 @@ struct seqpt_less : public thrust::binary_function<seqpt_t, seqpt_t, bool>
     }
 };
 
+struct sigpt_min : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
+{
+    __device__ sigpt_t
+    operator()(const sigpt_t &lhs, const sigpt_t &rhs) const
+    {
+        sigpt_t r = rhs;
+        sigpt_t s = lhs;
+
+        const int is_rhs_min = (r.y <= s.y) != 0;
+
+        s.y += is_rhs_min * (r.y - s.y);
+        s.dy += is_rhs_min * (r.dy - s.dy);
+
+        return s;
+    }
+};
+
 __global__ void
 extract_i(const seqpt_t *in, int *out, int n, int flag)
 {
@@ -168,25 +185,6 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
         }
 
         ts[ii].t = t;
-    }
-}
-
-__global__ void
-pointwise_and(const sigpt_t *lhs, const sigpt_t *rhs,
-              sigpt_t *out, int n)
-{
-    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        sigpt_t r = rhs[i];
-        sigpt_t s = lhs[i];
-
-        const int is_rhs_min = (r.y <= s.y) != 0;
-
-        s.y += is_rhs_min * (r.y - s.y);
-        s.dy += is_rhs_min * (r.dy - s.dy);
-
-        out[i] = s;
     }
 }
 
@@ -318,12 +316,10 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     /* And *finally* run the actual and operator. */
 
-    sigpt_t *ptr_lhs_extrapolated = thrust::raw_pointer_cast(lhs_extrapolated.data());
-    sigpt_t *ptr_rhs_extrapolated = thrust::raw_pointer_cast(rhs_extrapolated.data());
-    sigpt_t *ptr_out = thrust::raw_pointer_cast(out.data());
-
-    pointwise_and<<<NBLOCKS, NTHREADS>>>(ptr_lhs_extrapolated,
-            ptr_rhs_extrapolated, ptr_out, ts.size());
+    thrust::transform(lhs_extrapolated.begin(), lhs_extrapolated.end(),
+            rhs_extrapolated.begin(),
+            out.begin(),
+            sigpt_min());
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
