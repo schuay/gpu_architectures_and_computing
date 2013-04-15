@@ -171,6 +171,25 @@ calculate_intersection_seqs(const sigpt_t *lhs, const sigpt_t *rhs,
     }
 }
 
+__global__ void
+pointwise_and(const sigpt_t *lhs, const sigpt_t *rhs,
+              sigpt_t *out, int n)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        sigpt_t r = rhs[i];
+        sigpt_t s = lhs[i];
+
+        const int is_rhs_min = (r.y <= s.y) != 0;
+
+        s.y += is_rhs_min * (r.y - s.y);
+        s.dy += is_rhs_min * (r.dy - s.dy);
+
+        out[i] = s;
+    }
+}
+
 struct seqpt_same_time : public thrust::binary_function<seqpt_t, seqpt_t, bool>
 {
     __device__ bool
@@ -285,6 +304,26 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
         int k = rhs_max[i++];
     	printf("{ %f, %d, %d, %d, %x }\n", s.t, s.i, j, k, s.flags);
     }
+
+    /* We now have the complete time sequence stored in ts, including
+     * all points in lhs, rhs, and intersections of the two (what a bitch).
+     * Extrapolate the sigpt_t sequence of both signals for each point <- ts.
+     */
+
+    sigpt_t sigpt_init = { 0.f, 0.f, 0.f };
+    thrust::device_vector<sigpt_t> lhs_extrapolated(ts.size(), sigpt_init);
+    thrust::device_vector<sigpt_t> rhs_extrapolated(ts.size(), sigpt_init);
+
+    /* TODO */
+
+    /* And *finally* run the actual and operator. */
+
+    sigpt_t *ptr_lhs_extrapolated = thrust::raw_pointer_cast(lhs_extrapolated.data());
+    sigpt_t *ptr_rhs_extrapolated = thrust::raw_pointer_cast(rhs_extrapolated.data());
+    sigpt_t *ptr_out = thrust::raw_pointer_cast(out.data());
+
+    pointwise_and<<<NBLOCKS, NTHREADS>>>(ptr_lhs_extrapolated,
+            ptr_rhs_extrapolated, ptr_out, ts.size());
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
