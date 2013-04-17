@@ -209,8 +209,12 @@ insert_proto_intersections(const seqpt_t *in, seqpt_t *out, int n)
 }
 
 __global__ void
-calc_intersections(const sigpt_t *lhs, const sigpt_t *rhs,
-                   seqpt_t *ts, int n)
+calc_intersections(const sigpt_t *lhs,
+                   const sigpt_t *rhs,
+                   seqpt_t *ts,
+                   int n_lhs,
+                   int n_rhs,
+                   int n_ts)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -226,11 +230,12 @@ calc_intersections(const sigpt_t *lhs, const sigpt_t *rhs,
      * intersection.
      */
 
-    for (int i = tid; 2 * i + 1 < n; i += blockDim.x * gridDim.x) {
+    for (int i = tid; 2 * i + 1 < n_ts; i += blockDim.x * gridDim.x) {
         const int ii = 2 * i + 1;
         seqpt_t s = ts[ii];
 
         const int is_lhs = (s.flags & FLAG_LHS) != 0;
+        const int is_rhs = !is_lhs;
 
         /* TODO: Optimize. */
         const sigpt_t *this_sig = is_lhs ? lhs : rhs;
@@ -247,10 +252,15 @@ calc_intersections(const sigpt_t *lhs, const sigpt_t *rhs,
          * there is none, we mark the element with FLAG_DEL.
          */
 
+        if ((is_lhs && (s.i >= n_lhs - 2 || s.assoc_i >= n_rhs - 2)) ||
+            (is_rhs && (s.i >= n_rhs - 2 || s.assoc_i >= n_lhs - 2))) {
+            continue; /* TODO: Optimize */
+        }
+
         const sigpt_t p1 = this_sig[s.i];
-        const sigpt_t p2 = this_sig[s.i + 1]; /* TODO: Range checks! */
+        const sigpt_t p2 = this_sig[s.i + 1];
         const sigpt_t p3 = other_sig[s.assoc_i];
-        const sigpt_t p4 = other_sig[s.assoc_i + 1]; /* TODO: Range checks! */
+        const sigpt_t p4 = other_sig[s.assoc_i + 1];
 
         const float denom = (p1.t - p2.t) * (p3.y - p4.y) -
                             (p1.y - p2.y) * (p3.t - p4.t);
@@ -360,7 +370,8 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * pair.
      */
 
-    calc_intersections<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi, tsi.size());
+    calc_intersections<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi,
+                                              lhs.size(), rhs.size(), tsi.size());
 
     /* Finally we again remove all duplicate elements (= all proto-intersections
      * which did not turn out to actually be real intersections).
