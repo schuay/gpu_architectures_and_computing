@@ -403,31 +403,31 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * kernel calls, try to be a bit smarter about it. For example,
      * we could queue the allocations on a separate stream. */
 
-    printf("lhs:\n");
+    printf("lhs (%d):\n", lhs.size());
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = lhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\nrhs:\n");
+    printf("\nrhs (%d):\n", rhs.size());
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = rhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\ntsi:\n");
+    printf("\ntsi (%d):\n", tsi.size());
     for (int i = 0; i < 10; i++) {
     	seqpt_t s = tsi[i];
     	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
     }
 
-    printf("\nlhs_extrapolated:\n");
+    printf("\nlhs_extrapolated (%d):\n", lhs_extrapolated.size());
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = lhs_extrapolated[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\nrhs_extrapolated:\n");
+    printf("\nrhs_extrapolated (%d):\n", rhs_extrapolated.size());
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = rhs_extrapolated[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
