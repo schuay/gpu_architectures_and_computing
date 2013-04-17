@@ -359,12 +359,6 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     thrust::unique(tsi.begin(), tsi.end(), seqpt_same_time());
 
-    for (thrust::device_vector<seqpt_t>::iterator iter = tsi.begin();
-         iter != tsi.begin() + 40; iter++) {
-    	seqpt_t s = *iter;
-    	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
-    }
-
     /* We now have the complete time sequence stored in ts, including
      * all points in lhs, rhs, and intersections of the two (what a bitch).
      * Extrapolate the sigpt_t sequence of both signals for each point <- ts.
@@ -388,6 +382,36 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     /* TODO: Instead of allocating all of these device vectors between 
      * kernel calls, try to be a bit smarter about it. For example,
      * we could queue the allocations on a separate stream. */
+
+    printf("lhs:\n");
+    for (int i = 0; i < 10; i++) {
+        sigpt_t sigpt = lhs[i];
+    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
+
+    printf("\nrhs:\n");
+    for (int i = 0; i < 10; i++) {
+        sigpt_t sigpt = rhs[i];
+    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
+
+    printf("\ntsi:\n");
+    for (int i = 0; i < 10; i++) {
+    	seqpt_t s = tsi[i];
+    	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
+    }
+
+    printf("\nlhs_extrapolated:\n");
+    for (int i = 0; i < 10; i++) {
+        sigpt_t sigpt = lhs_extrapolated[i];
+    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
+
+    printf("\nrhs_extrapolated:\n");
+    for (int i = 0; i < 10; i++) {
+        sigpt_t sigpt = rhs_extrapolated[i];
+    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
