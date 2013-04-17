@@ -511,6 +511,9 @@ stl_eventually(const thrust::device_vector<sigpt_t> &in,
 int
 main(int argc, char **argv)
 {
+    cudaEvent_t start, stop;
+    float elapsedTime;
+
     sigpt_t *a = sigpt_random(42, NITEMS);
     sigpt_t *b = sigpt_random(43, NITEMS);
     sigpt_t *c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
@@ -519,7 +522,19 @@ main(int argc, char **argv)
     thrust::device_vector<sigpt_t> rhs(b, b + NITEMS);
     thrust::device_vector<sigpt_t> out(c, c + 4 * NITEMS);
 
+    checkCudaError(cudaEventCreate(&start));
+    checkCudaError(cudaEventCreate(&stop));
+    checkCudaError(cudaEventRecord(start, 0));
+
     stl_and(lhs, rhs, out);
+
+    checkCudaError(cudaEventRecord(stop, 0));
+    checkCudaError(cudaEventSynchronize(stop));
+    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
+    checkCudaError(cudaEventDestroy(start));
+    checkCudaError(cudaEventDestroy(stop));
+
+    printf("\n\nElapsed time: %f ms\n", elapsedTime);
 
     free(a);
     free(b);
