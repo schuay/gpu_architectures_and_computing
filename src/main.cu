@@ -331,15 +331,17 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::merge(lhs_ts.begin(), lhs_ts.end(), rhs_ts.begin(), rhs_ts.end(),
                   ts.begin(), seqpt_less());
 
-    thrust::unique(ts.begin(), ts.end(), seqpt_same_time());
+    thrust::device_vector<seqpt_t>::iterator ts_end =
+        thrust::unique(ts.begin(), ts.end(), seqpt_same_time());
+    int ts_size = ts_end - ts.begin();
 
     /* Add a proto-intersection after each point in the resulting sequence. */
 
     seqinit.flags = 0;
     const seqpt_t *ptr_ts = thrust::raw_pointer_cast(ts.data());
-    thrust::device_vector<seqpt_t> tsi(ts.size() * 2, seqinit);
+    thrust::device_vector<seqpt_t> tsi(ts_size * 2, seqinit);
     seqpt_t *ptr_tsi = thrust::raw_pointer_cast(tsi.data());
-    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ptr_ts, ptr_tsi, ts.size());
+    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ptr_ts, ptr_tsi, ts_size);
 
     /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
      * find the index of the element to its immediate left of the opposing side.
@@ -377,7 +379,9 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * which did not turn out to actually be real intersections).
      */
 
-    thrust::unique(tsi.begin(), tsi.end(), seqpt_same_time());
+    thrust::device_vector<seqpt_t>::iterator tsi_end =
+        thrust::unique(tsi.begin(), tsi.end(), seqpt_same_time());
+    int tsi_size = ts_end - ts.begin();
 
     /* We now have the complete time sequence stored in ts, including
      * all points in lhs, rhs, and intersections of the two (what a bitch).
@@ -385,12 +389,12 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      */
 
     sigpt_t sigpt_init = { 0.f, 0.f, 0.f };
-    thrust::device_vector<sigpt_t> lhs_extrapolated(tsi.size(), sigpt_init);
-    thrust::device_vector<sigpt_t> rhs_extrapolated(tsi.size(), sigpt_init);
+    thrust::device_vector<sigpt_t> lhs_extrapolated(tsi_size, sigpt_init);
+    thrust::device_vector<sigpt_t> rhs_extrapolated(tsi_size, sigpt_init);
     sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi,
             thrust::raw_pointer_cast(lhs_extrapolated.data()),
             thrust::raw_pointer_cast(rhs_extrapolated.data()),
-            lhs.size(), rhs.size(), tsi.size());
+            lhs.size(), rhs.size(), tsi_size);
 
     /* And *finally* run the actual and operator. */
 
@@ -415,7 +419,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\ntsi (%d):\n", tsi.size());
+    printf("\ntsi (%d):\n", tsi_size);
     for (int i = 0; i < 10; i++) {
     	seqpt_t s = tsi[i];
     	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
