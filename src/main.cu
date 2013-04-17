@@ -443,18 +443,6 @@ struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
     __device__ sigpt_t
     operator()(const sigpt_t &lhs, const sigpt_t &rhs) const
     {
-        /*sigpt_t ret;
-        if (lhs.y > rhs.y) {
-            ret.y = lhs.y;
-        } else {
-            ret.y = rhs.y;
-        }
-
-        // Keep the time.
-        ret.t = rhs.t;
-
-        return ret;*/
-
         return (sigpt_t) {rhs.t, CUDA_MAX(lhs.y, rhs.y), 0};
     }
 };
@@ -536,32 +524,6 @@ main(int argc, char **argv)
     free(a);
     free(b);
     free(c);
-
-    /* And a Thrust scan operation, let's see how we can integrate that with the rest of
-     * the code...
-     */
-
-    /*
-
-    thrust::plus<float> binary_op;
-
-    thrust::host_vector<float> hostVector(NITEMS);
-    thrust::generate(hostVector.begin(), hostVector.end(), rand);
-
-    thrust::device_vector<float> deviceVector = hostVector;
-    thrust::exclusive_scan(deviceVector.begin(), deviceVector.end(), deviceVector.begin(), 0.f, binary_op);
-
-    thrust::copy(deviceVector.begin(), deviceVector.end(), hostVector.begin());
-
-    for (thrust::device_vector<float>::iterator iter = deviceVector.begin();
-         iter != deviceVector.begin() + 10;
-         iter++) {
-    	float val = *iter;
-    	printf("%f ", val);
-    }
-    printf("\n");
-
-    */
 
     return 0;
 }
