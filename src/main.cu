@@ -26,6 +26,8 @@ extern "C" {
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
+/* TODO: Handle multiple GPUs. */
+
 bool
 _checkCudaError(cudaError_t result, const char *func, const char *file, int line)
 {
@@ -337,6 +339,10 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
             rhs_extrapolated.begin(),
             out.begin(),
             sigpt_min());
+
+    /* TODO: Instead of allocating all of these device vectors between 
+     * kernel calls, try to be a bit smarter about it. For example,
+     * we could queue the allocations on a separate stream. */
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
