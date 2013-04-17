@@ -316,32 +316,27 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     /* First, extract the time sequences, merge them, and remove duplicates. */
 
     const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
-    seqpt_t seqinit = { 0.f, 0, 0, FLAG_LHS };
-    thrust::device_vector<seqpt_t> lhs_ts(lhs.size(), seqinit);
-    seqpt_t *ptr_lhs_ts = thrust::raw_pointer_cast(lhs_ts.data());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_lhs_ts, lhs.size(), FLAG_LHS);
+    thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(lhs.size());
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_lhs, lhs_ts.get(), lhs.size(), FLAG_LHS);
 
     const sigpt_t *ptr_rhs = thrust::raw_pointer_cast(rhs.data());
-    seqinit.flags = FLAG_RHS;
-    thrust::device_vector<seqpt_t> rhs_ts(rhs.size(), seqinit);
-    seqpt_t *ptr_rhs_ts = thrust::raw_pointer_cast(rhs_ts.data());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_rhs, ptr_rhs_ts, rhs.size(), FLAG_RHS);
+    thrust::device_ptr<seqpt_t> rhs_ts = thrust::device_malloc<seqpt_t>(rhs.size());
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_rhs, rhs_ts.get(), rhs.size(), FLAG_RHS);
 
-    thrust::device_vector<seqpt_t> ts(lhs_ts.size() + rhs_ts.size(), seqinit);
-    thrust::merge(lhs_ts.begin(), lhs_ts.end(), rhs_ts.begin(), rhs_ts.end(),
-                  ts.begin(), seqpt_less());
+    int n_ts = rhs.size() + lhs.size();
+    thrust::device_ptr<seqpt_t> ts = thrust::device_malloc<seqpt_t>(n_ts);
+    thrust::merge(lhs_ts, lhs_ts + lhs.size(), rhs_ts, rhs_ts + rhs.size(),
+                  ts, seqpt_less());
 
-    thrust::device_vector<seqpt_t>::iterator ts_end =
-        thrust::unique(ts.begin(), ts.end(), seqpt_same_time());
-    int ts_size = ts_end - ts.begin();
+    thrust::device_ptr<seqpt_t> ts_end =
+        thrust::unique(ts, ts + n_ts, seqpt_same_time());
+    int ts_size = ts_end - ts;
 
     /* Add a proto-intersection after each point in the resulting sequence. */
 
-    seqinit.flags = 0;
-    const seqpt_t *ptr_ts = thrust::raw_pointer_cast(ts.data());
-    thrust::device_vector<seqpt_t> tsi(ts_size * 2, seqinit);
-    seqpt_t *ptr_tsi = thrust::raw_pointer_cast(tsi.data());
-    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ptr_ts, ptr_tsi, ts_size);
+    int n_tsi = n_ts * 2;
+    thrust::device_ptr<seqpt_t> tsi = thrust::device_malloc<seqpt_t>(n_tsi);
+    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), ts_size);
 
     /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
      * find the index of the element to its immediate left of the opposing side.
@@ -350,21 +345,19 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * seqpt_t.assoc_i.
      */ 
 
-    thrust::device_vector<int> lhs_i_max(tsi.size(), 0);
-    int *ptr_lhs_i_max = thrust::raw_pointer_cast(lhs_i_max.data());
-    extract_i<<<NBLOCKS, NTHREADS>>>(ptr_tsi, ptr_lhs_i_max, tsi.size(), FLAG_LHS);
+    thrust::device_ptr<int> lhs_i_max = thrust::device_malloc<int>(n_tsi);
+    extract_i<<<NBLOCKS, NTHREADS>>>(tsi.get(), lhs_i_max.get(), n_tsi, FLAG_LHS);
 
-    thrust::inclusive_scan(lhs_i_max.begin(), lhs_i_max.end(), lhs_i_max.begin(),
+    thrust::inclusive_scan(lhs_i_max, lhs_i_max + n_tsi, lhs_i_max,
                            thrust::maximum<int>());
 
-    thrust::device_vector<int> rhs_i_max(tsi.size(), 0);
-    int *ptr_rhs_i_max = thrust::raw_pointer_cast(rhs_i_max.data());
-    extract_i<<<NBLOCKS, NTHREADS>>>(ptr_tsi, ptr_rhs_i_max, tsi.size(), FLAG_RHS);
+    thrust::device_ptr<int> rhs_i_max = thrust::device_malloc<int>(n_tsi);
+    extract_i<<<NBLOCKS, NTHREADS>>>(tsi.get(), rhs_i_max.get(), n_tsi, FLAG_RHS);
 
-    thrust::inclusive_scan(rhs_i_max.begin(), rhs_i_max.end(), rhs_i_max.begin(),
+    thrust::inclusive_scan(rhs_i_max, rhs_i_max + n_tsi, rhs_i_max,
                            thrust::maximum<int>());
 
-    merge_i<<<NBLOCKS, NTHREADS>>>(ptr_lhs_i_max, ptr_rhs_i_max, ptr_tsi, tsi.size());
+    merge_i<<<NBLOCKS, NTHREADS>>>(lhs_i_max.get(), rhs_i_max.get(), tsi.get(), n_tsi);
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
      * we set the time accordingly, and if there isn't, we mark it as DEL.
@@ -372,36 +365,32 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * pair.
      */
 
-    calc_intersections<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi,
-                                              lhs.size(), rhs.size(), tsi.size());
+    calc_intersections<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, tsi.get(),
+                                              lhs.size(), rhs.size(), n_tsi);
 
     /* Finally we again remove all duplicate elements (= all proto-intersections
      * which did not turn out to actually be real intersections).
      */
 
-    thrust::device_vector<seqpt_t>::iterator tsi_end =
-        thrust::unique(tsi.begin(), tsi.end(), seqpt_same_time());
-    int tsi_size = ts_end - ts.begin();
+    thrust::device_ptr<seqpt_t> tsi_end =
+        thrust::unique(tsi, tsi + n_tsi, seqpt_same_time());
+    n_tsi = tsi_end - tsi;
 
     /* We now have the complete time sequence stored in ts, including
      * all points in lhs, rhs, and intersections of the two (what a bitch).
      * Extrapolate the sigpt_t sequence of both signals for each point <- ts.
      */
 
-    sigpt_t sigpt_init = { 0.f, 0.f, 0.f };
-    thrust::device_vector<sigpt_t> lhs_extrapolated(tsi_size, sigpt_init);
-    thrust::device_vector<sigpt_t> rhs_extrapolated(tsi_size, sigpt_init);
-    sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi,
-            thrust::raw_pointer_cast(lhs_extrapolated.data()),
-            thrust::raw_pointer_cast(rhs_extrapolated.data()),
-            lhs.size(), rhs.size(), tsi_size);
+    thrust::device_ptr<sigpt_t> lhs_extrapolated = thrust::device_malloc<sigpt_t>(n_tsi);
+    thrust::device_ptr<sigpt_t> rhs_extrapolated = thrust::device_malloc<sigpt_t>(n_tsi);
+    sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, tsi.get(),
+                                             lhs_extrapolated.get(), rhs_extrapolated.get(),
+                                             lhs.size(), rhs.size(), n_tsi);
 
     /* And *finally* run the actual and operator. */
 
-    thrust::transform(lhs_extrapolated.begin(), lhs_extrapolated.end(),
-            rhs_extrapolated.begin(),
-            out.begin(),
-            sigpt_min());
+    thrust::transform(lhs_extrapolated, lhs_extrapolated + n_tsi,
+                      rhs_extrapolated, out.begin(), sigpt_min());
 
     /* TODO: Instead of allocating all of these device vectors between 
      * kernel calls, try to be a bit smarter about it. For example,
@@ -419,23 +408,32 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\ntsi (%d):\n", tsi_size);
+    printf("\ntsi (%d):\n", n_tsi);
     for (int i = 0; i < 10; i++) {
     	seqpt_t s = tsi[i];
     	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
     }
 
-    printf("\nlhs_extrapolated (%d):\n", lhs_extrapolated.size());
+    printf("\nlhs_extrapolated (%d):\n", n_tsi);
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = lhs_extrapolated[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\nrhs_extrapolated (%d):\n", rhs_extrapolated.size());
+    printf("\nrhs_extrapolated (%d):\n", n_tsi);
     for (int i = 0; i < 10; i++) {
         sigpt_t sigpt = rhs_extrapolated[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
+
+    thrust::device_free(lhs_ts);
+    thrust::device_free(rhs_ts);
+    thrust::device_free(ts);
+    thrust::device_free(tsi);
+    thrust::device_free(lhs_i_max);
+    thrust::device_free(rhs_i_max);
+    thrust::device_free(lhs_extrapolated);
+    thrust::device_free(rhs_extrapolated);
 }
 
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
