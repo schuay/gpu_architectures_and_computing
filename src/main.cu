@@ -184,13 +184,13 @@ merge_i(const int *lhs, const int *rhs, seqpt_t *out, int n)
 }
 
 __global__ void
-sigpt_to_seqpt(const sigpt_t *in, seqpt_t *out, int n)
+sigpt_to_seqpt(const sigpt_t *in, seqpt_t *out, int n, int flags)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        out[i].t = in[i].t;
-        out[i].i = i;
+        seqpt_t seqpt = { in[i].t, i, 0, flags };
+        out[i] = seqpt;
     }
 }
 
@@ -319,13 +319,13 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     seqpt_t seqinit = { 0.f, 0, 0, FLAG_LHS };
     thrust::device_vector<seqpt_t> lhs_ts(lhs.size(), seqinit);
     seqpt_t *ptr_lhs_ts = thrust::raw_pointer_cast(lhs_ts.data());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_lhs_ts, lhs.size());
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_lhs_ts, lhs.size(), FLAG_LHS);
 
     const sigpt_t *ptr_rhs = thrust::raw_pointer_cast(rhs.data());
     seqinit.flags = FLAG_RHS;
     thrust::device_vector<seqpt_t> rhs_ts(rhs.size(), seqinit);
     seqpt_t *ptr_rhs_ts = thrust::raw_pointer_cast(rhs_ts.data());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_rhs, ptr_rhs_ts, rhs.size());
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_rhs, ptr_rhs_ts, rhs.size(), FLAG_RHS);
 
     thrust::device_vector<seqpt_t> ts(lhs_ts.size() + rhs_ts.size(), seqinit);
     thrust::merge(lhs_ts.begin(), lhs_ts.end(), rhs_ts.begin(), rhs_ts.end(),
