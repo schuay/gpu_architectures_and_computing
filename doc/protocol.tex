@@ -44,4 +44,17 @@
 
 \section{Implementation Plan}
 
+\begin{comments}
+Initial results for AND seem to be roughly linear:
+
+NSIZE: ms
+256 * 257: 6.443328
+10 * 256 * 257: 27.997761
+20 * 256 * 257: 52.359810
+80 * 256 * 257: 251.557602
+
+Linux-x86_64 3.8.7, NVIDIA 313.30, GeForce GTX 660, Intel(R) Core(TM) i5 CPU 760  @ 2.80GHz,
+cuda 5.0.35, gcc 4.8.0, commit 1e56a4ac
+\end{comments}
+
 \end{document}
