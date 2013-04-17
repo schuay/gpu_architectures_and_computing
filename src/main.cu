@@ -93,16 +93,60 @@ struct sigpt_min : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
     }
 };
 
+/**
+ * Given a sequence point t with l.t <= t.t <= r.t,
+ * returns an interpolated signal point at time t.t.
+ */
+__device__ sigpt_t
+interpolate(const sigpt_t *l,
+            const sigpt_t *r,
+            const seqpt_t *t)
+{
+    const sigpt_t l_reg = *l;
+    const sigpt_t r_reg = *r;
+
+    const float dt = r_reg.t - l_reg.t;
+    const float dy = r_reg.y - l_reg.y;
+    const float dy_normed = dy / dt; /* TODO: Assumes dt != 0.f. */
+
+    sigpt_t sigpt = { t->t, l_reg.y + dy_normed * (t->t - l_reg.t), dy_normed };
+    return sigpt;
+}
+
 __global__ void
 sigpt_extrapolate(const sigpt_t *lhs,
                   const sigpt_t *rhs,
                   const seqpt_t *ts,
                   sigpt_t *lhs_extrapolated,
-                  sigpt_t *rhs_extrapolated)
+                  sigpt_t *rhs_extrapolated,
+                  int n_lhs,
+                  int n_rhs,
+                  int n_ts)
 {
-    /* TODO: Use the information provided by lhs, rhs, and ts
+    /* Use the information provided by lhs, rhs, and ts
      * to extrapolated a signal point sequence for both lhs and rhs for each
      * time point in ts. */
+
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n_ts; i += blockDim.x * gridDim.x) {
+        const seqpt_t seqpt = ts[i];
+
+        const int is_lhs = (seqpt.flags & FLAG_LHS) != 0;
+        const int is_rhs = !is_lhs;
+
+        const int assoc_lhs = is_lhs * seqpt.i + is_rhs * seqpt.assoc_i;
+        const int assoc_rhs = is_rhs * seqpt.i + is_lhs * seqpt.assoc_i;
+
+        /* TODO: Range checks. */
+
+        lhs_extrapolated[i] = interpolate(lhs + assoc_lhs,
+                                          lhs + assoc_lhs + 1,
+                                          &seqpt);
+        rhs_extrapolated[i] = interpolate(rhs + assoc_rhs,
+                                          rhs + assoc_rhs + 1,
+                                          &seqpt);
+    }
 }
 
 __global__ void
@@ -331,7 +375,8 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::device_vector<sigpt_t> rhs_extrapolated(tsi.size(), sigpt_init);
     sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, ptr_tsi,
             thrust::raw_pointer_cast(lhs_extrapolated.data()),
-            thrust::raw_pointer_cast(rhs_extrapolated.data()));
+            thrust::raw_pointer_cast(rhs_extrapolated.data()),
+            lhs.size(), rhs.size(), tsi.size());
 
     /* And *finally* run the actual and operator. */
 
