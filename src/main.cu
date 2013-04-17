@@ -138,14 +138,23 @@ sigpt_extrapolate(const sigpt_t *lhs,
         const int assoc_lhs = is_lhs * seqpt.i + is_rhs * seqpt.assoc_i;
         const int assoc_rhs = is_rhs * seqpt.i + is_lhs * seqpt.assoc_i;
 
-        /* TODO: Range checks. */
+        /* TODO: Optimize. */
 
-        lhs_extrapolated[i] = interpolate(lhs + assoc_lhs,
-                                          lhs + assoc_lhs + 1,
-                                          &seqpt);
-        rhs_extrapolated[i] = interpolate(rhs + assoc_rhs,
-                                          rhs + assoc_rhs + 1,
-                                          &seqpt);
+        if (assoc_lhs >= n_lhs - 1) {
+            lhs_extrapolated[i] = (sigpt_t){ seqpt.t, lhs[i].y, lhs[i].dy };
+        } else {
+            lhs_extrapolated[i] = interpolate(lhs + assoc_lhs,
+                                              lhs + assoc_lhs + 1,
+                                              &seqpt);
+        }
+
+        if (assoc_rhs >= n_rhs - 1) {
+            rhs_extrapolated[i] = (sigpt_t){ seqpt.t, rhs[i].y, rhs[i].dy };
+        } else {
+            rhs_extrapolated[i] = interpolate(rhs + assoc_rhs,
+                                              rhs + assoc_rhs + 1,
+                                              &seqpt);
+        }
     }
 }
 
