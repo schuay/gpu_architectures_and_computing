@@ -39,6 +39,7 @@ target_link_libraries(tempParser
 
 set(SOURCES
     sigpt.c
+    util.c
     main.cu
 )
 

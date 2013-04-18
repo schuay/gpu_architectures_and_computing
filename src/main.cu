@@ -12,6 +12,7 @@
 
 extern "C" {
 #include "sigpt.h"
+#include "util.h"
 }
 
 #define NBLOCKS (256)
