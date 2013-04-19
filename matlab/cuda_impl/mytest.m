@@ -46,12 +46,17 @@ val2 = QMITL_Eval2raw(Sys, phi, traj);
 writeSignal('and-test-breach-result.txt', [val2.time; val2.X]);
 
 figure(1);
+subplot(2,1,1);
 plot(sig1.time, sig1.X, '-sb',...
      sig2.time, sig2.X, '-sr',...
      val2.time, val2.X, '-sg');
 title('sig1 (blue), sig2 (red), (s1[t] > 0) and (s2[t] > 0) (green)');
 grid on;
 
+gpu_result = readSignal('and-test-gpu-result.txt');
+subplot(2,1,2);
+plot(gpu_result.time, gpu_result.X, '-xg');
+grid on;
 
 %% 
 %% second AND test
@@ -78,14 +83,21 @@ val2 = QMITL_Eval2raw(Sys, phi, traj);
 
 % plot it
 figure(2);
+subplot(2,1,1);
 plot(t, y1, '-xb',...
      t, y2, '-xr',...
      val2.time, val2.X, '-xg');
- 
+grid on;
+
+gpu_result = readSignal('and-test2-gpu-result.txt');
+subplot(2,1,2);
+plot(gpu_result.time, gpu_result.X, '-xg');
+grid on;
+
 % save our signals
-writeSignal('and_test2-sig1.txt', [t ; y1]);
-writeSignal('and_test2-sig2.txt', [t ; y2]);
-writeSignal('and_test2-breach-result.txt', [val2.time ; val2.X]);
+writeSignal('and-test2-sig1.txt', [t ; y1]);
+writeSignal('and-test2-sig2.txt', [t ; y2]);
+writeSignal('and-test2-breach-result.txt', [val2.time ; val2.X]);
 
 
 
@@ -107,8 +119,16 @@ QMITL_Eval(Sys, phi_ev, P, traj);
 val = QMITL_Eval2raw(Sys, phi_ev, traj);
 
 figure(3);
+subplot(2,1,1);
 plot(traj.time, traj.X, '-xb',...
      val.time, val.X, '-sg');
+grid on;
+
+% plot gpu result
+gpu = readSignal('eventually-test-gpu-result.txt');
+subplot(2,1,2);
+plot(gpu.time, gpu.X, '-xg');
+grid on;
 
 % save result
 writeSignal('eventually-test-breach-result.txt', [val.time ; val.X]);
@@ -134,5 +154,12 @@ writeSignal('eventually-test2-sig.txt', [t ; y]);
 writeSignal('eventually-test2-breach-result.txt', [val.time, val.X]);
 
 figure(4);
+subplot(2,1,1);
 plot(t, y, '-xb',...
      val.time, val.X, '-sr');
+grid on;
+
+gpu = readSignal('eventually-test2-gpu-result.txt');
+subplot(2,1,2);
+plot(gpu.time, gpu.X, '-xg');
+grid on;
