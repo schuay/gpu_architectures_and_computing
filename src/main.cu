@@ -27,6 +27,9 @@ extern "C" {
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
+#define TESTFILES_PATH "../matlab/cuda_impl/"
+
+
 /* TODO: Handle multiple GPUs. */
 
 bool
@@ -300,7 +303,7 @@ struct seqpt_same_time : public thrust::binary_function<seqpt_t, seqpt_t, bool>
 void
 stl_and(const thrust::device_vector<sigpt_t> &lhs,
         const thrust::device_vector<sigpt_t> &rhs,
-        thrust::device_vector<sigpt_t> out)
+        thrust::device_vector<sigpt_t> &out)
 {
     /* A rough outline of the function:
      *
@@ -398,32 +401,38 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * we could queue the allocations on a separate stream. */
 
     printf("lhs (%d):\n", lhs.size());
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < lhs.size() && i < 10; i++) {
         sigpt_t sigpt = lhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\nrhs (%d):\n", rhs.size());
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < rhs.size() && i < 10; i++) {
         sigpt_t sigpt = rhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\ntsi (%d):\n", n_tsi);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < n_tsi && i < 10; i++) {
     	seqpt_t s = tsi[i];
     	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
     }
 
     printf("\nlhs_extrapolated (%d):\n", n_tsi);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < n_tsi && i < 10; i++) {
         sigpt_t sigpt = lhs_extrapolated[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\nrhs_extrapolated (%d):\n", n_tsi);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < n_tsi && i < 10; i++) {
         sigpt_t sigpt = rhs_extrapolated[i];
+    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
+
+    printf("\nresult (%d):\n", out.size());
+    for (int i = 0; i < out.size() && i < 10; i++) {
+        sigpt_t sigpt = out[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
@@ -507,6 +516,78 @@ stl_eventually(const thrust::device_vector<sigpt_t> &in,
     out.resize(positions.back());
 }
 
+
+/**
+ * test functions
+ */
+void and_test(const char* sig1_filename, const char* sig2_filename,
+		const char* result_filename) {
+    sigpt_t *a;
+    sigpt_t *b;
+    sigpt_t *c;
+
+    int a_n = 0;
+    int b_n = 0;
+    a_n = read_signal_file(sig1_filename, &a);
+    b_n = read_signal_file(sig2_filename, &b);
+    if (a_n > 0 && b_n > 0) {
+    	c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
+    	if (c == NULL)
+    		return;
+
+    	thrust::device_vector<sigpt_t> sig1(a, a + a_n);
+    	thrust::device_vector<sigpt_t> sig2(b, b + b_n);
+    	thrust::device_vector<sigpt_t> result(c, c + 4 * max(a_n, b_n));
+
+    	stl_and(sig1, sig2, result);
+
+    	/* there must be a much better way to fetch data back to host */
+    	for (int i = 0; i < result.size(); i++)
+    		c[i] = result[i];
+
+    	write_signal_file(result_filename,
+    			c, result.size());
+
+    	free(a);
+    	free(b);
+    	free(c);
+    } else {
+    	fprintf(stderr, "couldn't open one of the test files\n");
+    }
+}
+
+
+void eventually_test(const char* sig_filename, const char* result_filename) {
+	sigpt_t *a;
+	sigpt_t *b;
+
+	int a_n = read_signal_file(sig_filename, &a);
+	if (a_n > 0) {
+		thrust::device_vector<sigpt_t> in(a, a + a_n);
+		thrust::device_vector<sigpt_t> out(a_n * 2);
+
+		stl_eventually(in, out);
+
+		b = (sigpt_t *)calloc(a_n * 2, sizeof(sigpt_t));
+		if (b == NULL)
+			return;
+
+		for (int i = 0; i < out.size(); i++)
+			b[i] = out[i];
+
+		write_signal_file(result_filename, b, out.size());
+
+		free(a);
+		free(b);
+	} else {
+		fprintf(stderr, "couldn't open test file\n");
+	}
+}
+
+
+
+
+
 int
 main(int argc, char **argv)
 {
@@ -539,5 +620,22 @@ main(int argc, char **argv)
     free(b);
     free(c);
 
+    printf("run AND test 1\n");
+    and_test(TESTFILES_PATH "and-test-sig1.txt",
+    		 TESTFILES_PATH "and-test-sig2.txt",
+    		 TESTFILES_PATH "and-test-gpu-result.txt");
+
+    printf("run AND test 2\n");
+    and_test(TESTFILES_PATH "and-test2-sig1.txt",
+    		 TESTFILES_PATH "and-test2-sig2.txt",
+    		 TESTFILES_PATH "and-test2-gpu-result.txt");
+
+    printf("run EVENTUALLY test 1\n");
+    eventually_test(TESTFILES_PATH "eventually-test-sig.txt",
+    				TESTFILES_PATH "eventually-test-gpu-result.txt");
+
+    printf("run EVENTUALLY test 2\n");
+    eventually_test(TESTFILES_PATH "eventually-test2-sig.txt",
+    			    TESTFILES_PATH "eventually-test2-gpu-result.txt");
     return 0;
 }

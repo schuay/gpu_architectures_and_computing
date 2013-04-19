@@ -23,10 +23,10 @@ float *random_array(int seed, int length)
 
 
 
-sigpt_t *read_signal_file(const char* filename) {
+int read_signal_file(const char* filename, sigpt_t** signal) {
 
 	FILE *fh;
-	sigpt_t *signal;
+	sigpt_t *s;
 
 	fh = fopen(filename, "r");
 	if (fh) {
@@ -37,22 +37,24 @@ sigpt_t *read_signal_file(const char* filename) {
 
 		fseek(fh, 0, SEEK_SET);
 
-		signal = (sigpt_t*) malloc(line_count * sizeof(sigpt_t));
-		if (signal == NULL)
-			return NULL;
+		s = (sigpt_t*) malloc(line_count * sizeof(sigpt_t));
+		*signal = s;
+		if (s == NULL)
+			return 0;
 
 		int i = 0;
 		while (fgets(line, 1024, fh) || i > line_count) {
-			signal[i].t = signal[i].y = signal[i].dy = 0;
-			sscanf(line, "%f %f %f", &signal[i].t, &signal[i].y, &signal[i].dy);
+			s[i].t = s[i].y = s[i].dy = 0;
+			sscanf(line, "%f %f %f", &s[i].t, &s[i].y, &s[i].dy);
 			i++;
 		}
 
 		fclose(fh);
 
-		return signal;
+
+		return line_count;
 	} else
-		return NULL;
+		return 0;
 }
 
 

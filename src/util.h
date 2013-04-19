@@ -6,7 +6,7 @@
 
 float *random_array(int seed, int length);
 
-sigpt_t *read_signal_file(const char* filename);
+int read_signal_file(const char* filename, sigpt_t** signal);
 int write_signal_file(const char* filename, const sigpt_t* signal, int n);
 
 
