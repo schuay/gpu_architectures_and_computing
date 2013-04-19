@@ -3,7 +3,9 @@ function [ out ] = readSignal( filename )
 %   Detailed explanation goes here
 
     v = dlmread(filename);
-    out = v';
-
+    v = v';
+    out.time = v(1,:);
+    out.X = v(2,:);
+    out.dX = v(3,:);
 end
 
