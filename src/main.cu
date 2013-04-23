@@ -256,8 +256,8 @@ calc_intersections(const sigpt_t *lhs,
          * there is none, we mark the element with FLAG_DEL.
          */
 
-        if ((is_lhs && (s.i >= n_lhs - 2 || s.assoc_i >= n_rhs - 2)) ||
-            (is_rhs && (s.i >= n_rhs - 2 || s.assoc_i >= n_lhs - 2))) {
+        if ((is_lhs && (s.i > n_lhs - 2 || s.assoc_i > n_rhs - 2)) ||
+            (is_rhs && (s.i > n_rhs - 2 || s.assoc_i > n_lhs - 2))) {
             continue; /* TODO: Optimize */
         }
 
