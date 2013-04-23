@@ -317,7 +317,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * Finally, do a simple min() over these arrays.
      */
 
-    /* First, extract the time sequences, merge them, and remove duplicates. */
+    /* First, extract the time sequences, merge them. */
 
     const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
     thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(lhs.size());
@@ -332,16 +332,6 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::merge(lhs_ts, lhs_ts + lhs.size(), rhs_ts, rhs_ts + rhs.size(),
                   ts, seqpt_less());
 
-    thrust::device_ptr<seqpt_t> ts_end =
-        thrust::unique(ts, ts + n_ts, seqpt_same_time());
-    int ts_size = ts_end - ts;
-
-    /* Add a proto-intersection after each point in the resulting sequence. */
-
-    int n_tsi = n_ts * 2;
-    thrust::device_ptr<seqpt_t> tsi = thrust::device_malloc<seqpt_t>(n_tsi);
-    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), ts_size);
-
     /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
      * find the index of the element to its immediate left of the opposing side.
      * We do this by first extracting the indices of each side to an array,
@@ -349,19 +339,31 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * seqpt_t.assoc_i.
      */ 
 
-    thrust::device_ptr<int> lhs_i_max = thrust::device_malloc<int>(n_tsi);
-    extract_i<<<NBLOCKS, NTHREADS>>>(tsi.get(), lhs_i_max.get(), n_tsi, FLAG_LHS);
+    thrust::device_ptr<int> lhs_i_max = thrust::device_malloc<int>(n_ts);
+    extract_i<<<NBLOCKS, NTHREADS>>>(ts.get(), lhs_i_max.get(), n_ts, FLAG_LHS);
 
-    thrust::inclusive_scan(lhs_i_max, lhs_i_max + n_tsi, lhs_i_max,
+    thrust::inclusive_scan(lhs_i_max, lhs_i_max + n_ts, lhs_i_max,
                            thrust::maximum<int>());
 
-    thrust::device_ptr<int> rhs_i_max = thrust::device_malloc<int>(n_tsi);
-    extract_i<<<NBLOCKS, NTHREADS>>>(tsi.get(), rhs_i_max.get(), n_tsi, FLAG_RHS);
+    thrust::device_ptr<int> rhs_i_max = thrust::device_malloc<int>(n_ts);
+    extract_i<<<NBLOCKS, NTHREADS>>>(ts.get(), rhs_i_max.get(), n_ts, FLAG_RHS);
 
-    thrust::inclusive_scan(rhs_i_max, rhs_i_max + n_tsi, rhs_i_max,
+    thrust::inclusive_scan(rhs_i_max, rhs_i_max + n_ts, rhs_i_max,
                            thrust::maximum<int>());
 
-    merge_i<<<NBLOCKS, NTHREADS>>>(lhs_i_max.get(), rhs_i_max.get(), tsi.get(), n_tsi);
+    merge_i<<<NBLOCKS, NTHREADS>>>(lhs_i_max.get(), rhs_i_max.get(), ts.get(), n_ts);
+
+    /* Remove duplicates. */
+
+    thrust::device_ptr<seqpt_t> ts_end =
+        thrust::unique(ts, ts + n_ts, seqpt_same_time());
+    n_ts = ts_end - ts;
+
+    /* Add a proto-intersection after each point in the resulting sequence. */
+
+    int n_tsi = n_ts * 2;
+    thrust::device_ptr<seqpt_t> tsi = thrust::device_malloc<seqpt_t>(n_tsi);
+    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), n_ts);
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
      * we set the time accordingly, and if there isn't, we mark it as DEL.
