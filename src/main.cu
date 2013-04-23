@@ -317,7 +317,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * Finally, do a simple min() over these arrays.
      */
 
-    /* First, extract the time sequences, merge them, and remove duplicates. */
+    /* First, extract the time sequences and merge them. */
 
     const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
     thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(lhs.size());
@@ -332,15 +332,11 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::merge(lhs_ts, lhs_ts + lhs.size(), rhs_ts, rhs_ts + rhs.size(),
                   ts, seqpt_less());
 
-    thrust::device_ptr<seqpt_t> ts_end =
-        thrust::unique(ts, ts + n_ts, seqpt_same_time());
-    int ts_size = ts_end - ts;
-
     /* Add a proto-intersection after each point in the resulting sequence. */
 
     int n_tsi = n_ts * 2;
     thrust::device_ptr<seqpt_t> tsi = thrust::device_malloc<seqpt_t>(n_tsi);
-    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), ts_size);
+    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), n_ts);
 
     /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
      * find the index of the element to its immediate left of the opposing side.
@@ -363,6 +359,13 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     merge_i<<<NBLOCKS, NTHREADS>>>(lhs_i_max.get(), rhs_i_max.get(), tsi.get(), n_tsi);
 
+    /* Remove duplicates. We can't do this earlier because we need all elements of each
+     * signal to correctly calculate associated indices. */
+
+    thrust::device_ptr<seqpt_t> tsi_end =
+        thrust::unique(tsi, tsi + n_tsi, seqpt_same_time());
+    n_ts = tsi_end - tsi;
+
     /* Next, we go through and fill in ISC elements; if there's an intersection
      * we set the time accordingly, and if there isn't, we mark it as DEL.
      * An intersection must always be between the latest (lhs, rhs) and the next such
@@ -376,8 +379,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * which did not turn out to actually be real intersections).
      */
 
-    thrust::device_ptr<seqpt_t> tsi_end =
-        thrust::unique(tsi, tsi + n_tsi, seqpt_same_time());
+    tsi_end = thrust::unique(tsi, tsi + n_tsi, seqpt_same_time());
     n_tsi = tsi_end - tsi;
 
     /* We now have the complete time sequence stored in ts, including
