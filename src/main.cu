@@ -398,6 +398,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
     thrust::transform(lhs_extrapolated, lhs_extrapolated + n_tsi,
                       rhs_extrapolated, out.begin(), sigpt_min());
 
+    out.resize(n_tsi);
     /* TODO: Instead of allocating all of these device vectors between 
      * kernel calls, try to be a bit smarter about it. For example,
      * we could queue the allocations on a separate stream. */
