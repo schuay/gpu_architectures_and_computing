@@ -403,7 +403,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * kernel calls, try to be a bit smarter about it. For example,
      * we could queue the allocations on a separate stream. */
 
-    printf("lhs (%d):\n", lhs.size());
+/*    printf("lhs (%d):\n", lhs.size());
     for (int i = 0; i < lhs.size() && i < 10; i++) {
         sigpt_t sigpt = lhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
@@ -438,7 +438,7 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
         sigpt_t sigpt = out[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
-
+*/
     thrust::device_free(lhs_ts);
     thrust::device_free(rhs_ts);
     thrust::device_free(ts);
@@ -540,16 +540,36 @@ void and_test(const char* sig1_filename, const char* sig2_filename,
 
     	thrust::device_vector<sigpt_t> sig1(a, a + a_n);
     	thrust::device_vector<sigpt_t> sig2(b, b + b_n);
-    	thrust::device_vector<sigpt_t> result(c, c + 4 * max(a_n, b_n));
+    	thrust::device_vector<sigpt_t> d_result(c, c + 4 * max(a_n, b_n));
 
-    	stl_and(sig1, sig2, result);
+        cudaEvent_t start, stop;
+	    float elapsedTime;
+
+
+	    checkCudaError(cudaEventCreate(&start));
+	    checkCudaError(cudaEventCreate(&stop));
+	    checkCudaError(cudaEventRecord(start, 0));
+
+    	stl_and(sig1, sig2, d_result);
+
+	    checkCudaError(cudaEventRecord(stop, 0));
+	    checkCudaError(cudaEventSynchronize(stop));
+	    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
+	    checkCudaError(cudaEventDestroy(start));
+	    checkCudaError(cudaEventDestroy(stop));
+
+	    printf("\tElapsed time: %f ms\n", elapsedTime);
+
+
+
+    	thrust::host_vector<sigpt_t> result(d_result);
 
     	/* there must be a much better way to fetch data back to host */
-    	for (int i = 0; i < result.size(); i++)
-    		c[i] = result[i];
+    	//for (int i = 0; i < result.size(); i++)
+    	//	c[i] = result[i];
 
     	write_signal_file(result_filename,
-    			c, result.size());
+    			result.data(), result.size());
 
     	free(a);
     	free(b);
@@ -569,7 +589,24 @@ void eventually_test(const char* sig_filename, const char* result_filename) {
 		thrust::device_vector<sigpt_t> in(a, a + a_n);
 		thrust::device_vector<sigpt_t> out(a_n * 2);
 
+	    cudaEvent_t start, stop;
+	    float elapsedTime;
+
+
+	    checkCudaError(cudaEventCreate(&start));
+	    checkCudaError(cudaEventCreate(&stop));
+	    checkCudaError(cudaEventRecord(start, 0));
+
 		stl_eventually(in, out);
+
+	    checkCudaError(cudaEventRecord(stop, 0));
+	    checkCudaError(cudaEventSynchronize(stop));
+	    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
+	    checkCudaError(cudaEventDestroy(start));
+	    checkCudaError(cudaEventDestroy(stop));
+
+	    printf("\tElapsed time: %f ms\n", elapsedTime);
+
 
 		b = (sigpt_t *)calloc(a_n * 2, sizeof(sigpt_t));
 		if (b == NULL)
@@ -633,6 +670,31 @@ main(int argc, char **argv)
     		 TESTFILES_PATH "and-test2-sig2.txt",
     		 TESTFILES_PATH "and-test2-gpu-result.txt");
 
+    printf("run AND test 3 (100) \n");
+    and_test(TESTFILES_PATH "and-test3-100-sig1.txt",
+    		 TESTFILES_PATH "and-test3-100-sig2.txt",
+    		 TESTFILES_PATH "and-test3-100-gpu-result.txt");
+
+    printf("run AND test 3 (1000) \n");
+    and_test(TESTFILES_PATH "and-test3-1000-sig1.txt",
+    		 TESTFILES_PATH "and-test3-1000-sig2.txt",
+    		 TESTFILES_PATH "and-test3-1000-gpu-result.txt");
+
+    printf("run AND test 3 (10000) \n");
+    and_test(TESTFILES_PATH "and-test3-10000-sig1.txt",
+    		 TESTFILES_PATH "and-test3-10000-sig2.txt",
+    		 TESTFILES_PATH "and-test3-10000-gpu-result.txt");
+
+//    printf("run AND test 3 (100000) \n");
+//    and_test(TESTFILES_PATH "and-test3-100000-sig1.txt",
+//    		 TESTFILES_PATH "and-test3-100000-sig2.txt",
+//    		 TESTFILES_PATH "and-test3-100000-gpu-result.txt");
+
+//    printf("run AND test 3 (1000000) \n");
+//    and_test(TESTFILES_PATH "and-test3-1000000-sig1.txt",
+//    		 TESTFILES_PATH "and-test3-1000000-sig2.txt",
+//    		 TESTFILES_PATH "and-test3-1000000-gpu-result.txt");
+
     printf("run EVENTUALLY test 1\n");
     eventually_test(TESTFILES_PATH "eventually-test-sig.txt",
     				TESTFILES_PATH "eventually-test-gpu-result.txt");
@@ -640,5 +702,26 @@ main(int argc, char **argv)
     printf("run EVENTUALLY test 2\n");
     eventually_test(TESTFILES_PATH "eventually-test2-sig.txt",
     			    TESTFILES_PATH "eventually-test2-gpu-result.txt");
+
+    printf("run EVENTUALLY test 3 (100) \n");
+    eventually_test(TESTFILES_PATH "eventually-test3-100-sig.txt",
+    			    TESTFILES_PATH "eventually-test3-100-gpu-result.txt");
+
+    printf("run EVENTUALLY test 3 (1000) \n");
+    eventually_test(TESTFILES_PATH "eventually-test3-1000-sig.txt",
+    			    TESTFILES_PATH "eventually-test3-1000-gpu-result.txt");
+
+    printf("run EVENTUALLY test 3 (10000) \n");
+    eventually_test(TESTFILES_PATH "eventually-test3-10000-sig.txt",
+    			    TESTFILES_PATH "eventually-test3-10000-gpu-result.txt");
+
+    printf("run EVENTUALLY test 3 (100000) \n");
+    eventually_test(TESTFILES_PATH "eventually-test3-100000-sig.txt",
+    			    TESTFILES_PATH "eventually-test3-100000-gpu-result.txt");
+
+    printf("run EVENTUALLY test 3 (1000000) \n");
+    eventually_test(TESTFILES_PATH "eventually-test3-1000000-sig.txt",
+    			    TESTFILES_PATH "eventually-test3-1000000-gpu-result.txt");
+
     return 0;
 }

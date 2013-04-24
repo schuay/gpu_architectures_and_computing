@@ -7,7 +7,7 @@ if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-find_package(CUDA REQUIRED)
+find_package(CUDA REQUIRED /usr/local/cuda/lib64 )
 find_package(FLEX REQUIRED)
 find_package(BISON REQUIRED)
 
