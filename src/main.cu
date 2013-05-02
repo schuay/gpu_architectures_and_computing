@@ -1,11 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #include <cuda_runtime.h>
 #include <thrust/device_vector.h>
-#include <thrust/functional.h>
 
 extern "C" {
 #include "sigpt.h"
@@ -26,7 +24,10 @@ extern "C" {
 /* TODO: Handle multiple GPUs. */
 
 bool
-_checkCudaError(cudaError_t result, const char *func, const char *file, int line)
+_checkCudaError(cudaError_t result,
+                const char *func,
+                const char *file,
+                int line)
 {
     if (result) {
         fprintf(stderr, "CUDA error at %s:%d code=%d \"%s\" \n",
@@ -38,29 +39,13 @@ _checkCudaError(cudaError_t result, const char *func, const char *file, int line
 }
 
 /**
- * sizeof(out) == sizeof(in).
- */
-__global__ void
-stl_not(const sigpt_t *in, sigpt_t *out, int n)
-{
-    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        sigpt_t s = in[i];
-        s.y *= -1.f;
-        s.dy *= -1.f;
-        out[i] = s;
-    }
-}
-
-
-
-
-/**
  * test functions
  */
-void and_test(const char* sig1_filename, const char* sig2_filename,
-		const char* result_filename) {
+void
+and_test(const char* sig1_filename,
+         const char* sig2_filename,
+		 const char* result_filename)
+{
     sigpt_t *a;
     sigpt_t *b;
     sigpt_t *c;
@@ -115,8 +100,10 @@ void and_test(const char* sig1_filename, const char* sig2_filename,
     }
 }
 
-
-void eventually_test(const char* sig_filename, const char* result_filename) {
+void
+eventually_test(const char* sig_filename,
+                const char* result_filename)
+{
 	sigpt_t *a;
 	sigpt_t *b;
 

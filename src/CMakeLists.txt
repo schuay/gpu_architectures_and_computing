@@ -15,6 +15,9 @@ target_link_libraries(tempParser
 
 # The main CUDA binary
 
+cuda_add_library(stl_not
+    not.cu
+)
 cuda_add_library(stl_and
     and.cu
 )
@@ -39,6 +42,7 @@ cuda_add_library(gpuac
 target_link_libraries(gpuac
     stl_and
     stl_evtl
+    stl_not
 )
 
 # vim:set ts=4 sw=4 et:
