@@ -18,8 +18,6 @@ extern "C" {
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
-#define TESTFILES_PATH "../matlab/cuda_impl/"
-
 
 /* TODO: Handle multiple GPUs. */
 

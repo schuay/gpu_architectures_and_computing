@@ -2,12 +2,22 @@
 
 extern "C" {
 #include <check.h>
+#include <stdio.h>
+#include <string.h>
 
+#include "config.h"
 #include "sigpt.h"
 #include "util.h"
 }
 
 #define NITEMS (42)
+
+int
+sigcmp(const sigpt_t *lhs, const sigpt_t *rhs, int n)
+{
+    /* TODO: Won't work, fix me once we have decent test files. */
+    return memcmp(lhs, rhs, n);
+}
 
 START_TEST(test_sanity)
 {
@@ -27,6 +37,33 @@ START_TEST(test_sanity)
 }
 END_TEST
 
+START_TEST(test_sig1)
+{
+    sigpt_t *a, *b, *c;
+
+    int a_n = read_signal_file(SIG_PATH "/and-test-sig1.txt", &a);
+    int b_n = read_signal_file(SIG_PATH "/and-test-sig2.txt", &b);
+    fail_unless(a_n != -1 && b_n != -1);
+
+    thrust::device_vector<sigpt_t> lhs(a, a + a_n);
+    thrust::device_vector<sigpt_t> rhs(b, b + b_n);
+    thrust::device_vector<sigpt_t> out(4 * MAX(a_n, b_n));
+
+    stl_and(lhs, rhs, out);
+
+    thrust::host_vector<sigpt_t> host_out(out);
+
+    int c_n = read_signal_file(SIG_PATH "/and-test-breach-result.txt", &c);
+    fail_unless(c_n != -1);
+
+    fail_unless(sigcmp(c, host_out.data(), MAX(c_n, host_out.size())) == 0);
+
+    free(a);
+    free(b);
+    free(c);
+}
+END_TEST
+
 static Suite *
 create_suite(void)
 {
@@ -34,6 +71,7 @@ create_suite(void)
     TCase *tc_core = tcase_create("core");
 
     tcase_add_test(tc_core, test_sanity);
+    tcase_add_test(tc_core, test_sig1);
 
     suite_add_tcase(s, tc_core);
 
