@@ -19,6 +19,10 @@ cuda_add_library(stl_and
     and.cu
 )
 
+cuda_add_library(stl_evtl
+    evtl.cu
+)
+
 set(SOURCES
     sigpt.c
     util.c
@@ -32,6 +36,9 @@ include_directories(
 cuda_add_library(gpuac
     ${SOURCES}
 )
-target_link_libraries(gpuac stl_and)
+target_link_libraries(gpuac
+    stl_and
+    stl_evtl
+)
 
 # vim:set ts=4 sw=4 et:
