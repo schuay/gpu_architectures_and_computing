@@ -36,7 +36,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-cuda_add_library(gpuac
+cuda_add_executable(gpuac
     ${SOURCES}
 )
 target_link_libraries(gpuac
