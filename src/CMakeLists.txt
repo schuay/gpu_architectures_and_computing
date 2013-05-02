@@ -15,6 +15,10 @@ target_link_libraries(tempParser
 
 # The main CUDA binary
 
+cuda_add_library(stl_and
+    and.cu
+)
+
 set(SOURCES
     sigpt.c
     util.c
@@ -28,5 +32,6 @@ include_directories(
 cuda_add_library(gpuac
     ${SOURCES}
 )
+target_link_libraries(gpuac stl_and)
 
 # vim:set ts=4 sw=4 et:
