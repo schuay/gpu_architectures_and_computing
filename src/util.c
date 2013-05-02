@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
-float *random_array(int seed, int length)
+float *
+random_array(int seed,
+             int length)
 {
     float *fs = (float *)malloc(length * sizeof(float));
     if (fs == NULL) {
@@ -20,54 +21,60 @@ float *random_array(int seed, int length)
     return fs;
 }
 
-
-
-
-int read_signal_file(const char* filename, sigpt_t** signal) {
-
+int
+read_signal_file(const char *filename,
+                 sigpt_t **signal)
+{
 	FILE *fh;
 	sigpt_t *s;
 
 	fh = fopen(filename, "r");
-	if (fh) {
-		char line[1024];
-		int line_count = 0;
-		while (fgets(line, 1024, fh))
-			line_count++;
+	if (fh == NULL) {
+        return -1;
+    }
 
-		fseek(fh, 0, SEEK_SET);
+    char line[1024];
+    int line_count = 0;
+    while (fgets(line, 1024, fh)) {
+        line_count++;
+    }
 
-		s = (sigpt_t*) malloc(line_count * sizeof(sigpt_t));
-		*signal = s;
-		if (s == NULL)
-			return 0;
+    fseek(fh, 0, SEEK_SET);
 
-		int i = 0;
-		while (fgets(line, 1024, fh) || i > line_count) {
-			s[i].t = s[i].y = s[i].dy = 0;
-			sscanf(line, "%f %f %f", &s[i].t, &s[i].y, &s[i].dy);
-			i++;
-		}
+    s = (sigpt_t*) malloc(line_count * sizeof(sigpt_t));
+    *signal = s;
+    if (s == NULL) {
+        return -1;
+    }
 
-		fclose(fh);
+    int i = 0;
+    while (fgets(line, 1024, fh) || i > line_count) {
+        s[i].t = s[i].y = s[i].dy = 0;
+        sscanf(line, "%f %f %f", &s[i].t, &s[i].y, &s[i].dy);
+        i++;
+    }
 
+    fclose(fh);
 
-		return line_count;
-	} else
-		return 0;
+    return line_count;
 }
 
-
-int write_signal_file(const char* filename, const sigpt_t* signal, int n) {
-
+int
+write_signal_file(const char* filename,
+                  const sigpt_t* signal,
+                  int n)
+{
 	FILE *fh;
 
 	fh = fopen(filename, "w+");
-	if (fh) {
-		for (int i = 0; i < n; i++) {
-			fprintf(fh, "%.10f %.10f %.10f\n", signal[i].t, signal[i].y, signal[i].dy);
-		}
-		fclose(fh);
-	}
+	if (fh == NULL) {
+        return -1;
+    }
+
+    for (int i = 0; i < n; i++) {
+        fprintf(fh, "%.10f %.10f %.10f\n", signal[i].t, signal[i].y, signal[i].dy);
+    }
+    fclose(fh);
+
 	return 0;
 }
