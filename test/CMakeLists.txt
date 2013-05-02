@@ -3,6 +3,6 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src
 )
 
-add_executable(and_test and.c)
-target_link_libraries(and_test ${CHECK_LIBRARIES})
+cuda_add_executable(and_test and.cu)
+target_link_libraries(and_test gpuac ${CHECK_LIBRARIES})
 add_test(and_test ${CMAKE_CURRENT_BINARY_DIR}/and_test)
