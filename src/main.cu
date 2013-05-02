@@ -10,8 +10,8 @@ extern "C" {
 #include "util.h"
 }
 
-#include "and.hpp"
-#include "evtl.hpp"
+#include "operators/and.hpp"
+#include "operators/evtl.hpp"
 #include "globals.h"
 
 #define NITEMS (256 * 257)

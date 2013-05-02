@@ -1,4 +1,4 @@
-#include "and.hpp"
+#include "operators/and.hpp"
 
 extern "C" {
 #include <check.h>
