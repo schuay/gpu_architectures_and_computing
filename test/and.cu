@@ -15,6 +15,34 @@ extern "C" {
 
 #define FLOAT_EQUALS(x, y) (fabs((x) - (y)) < 0.00005)
 
+#define AND_TEST(name, flhs, frhs, fexpected) \
+START_TEST(name) \
+{ \
+    sigpt_t *a, *b, *c; \
+ \
+    int a_n = read_signal_file(SIG_PATH "/" flhs, &a); \
+    int b_n = read_signal_file(SIG_PATH "/" frhs, &b); \
+    fail_unless(a_n != -1 && b_n != -1); \
+ \
+    thrust::device_vector<sigpt_t> lhs(a, a + a_n); \
+    thrust::device_vector<sigpt_t> rhs(b, b + b_n); \
+    thrust::device_vector<sigpt_t> out(4 * MAX(a_n, b_n)); \
+ \
+    stl_and(lhs, rhs, out); \
+ \
+    thrust::host_vector<sigpt_t> host_out(out); \
+ \
+    int c_n = read_signal_file(SIG_PATH "/" fexpected, &c); \
+    fail_unless(c_n != -1); \
+ \
+    fail_unless(sigcmp(c, host_out.data(), MAX(c_n, host_out.size())) == 0); \
+ \
+    free(a); \
+    free(b); \
+    free(c); \
+} \
+END_TEST
+
 static int
 sigcmp(const sigpt_t *lhs, const sigpt_t *rhs, int n)
 {
@@ -68,32 +96,7 @@ START_TEST(test_sanity)
 }
 END_TEST
 
-START_TEST(test_sig1)
-{
-    sigpt_t *a, *b, *c;
-
-    int a_n = read_signal_file(SIG_PATH "/and-test-sig1.txt", &a);
-    int b_n = read_signal_file(SIG_PATH "/and-test-sig2.txt", &b);
-    fail_unless(a_n != -1 && b_n != -1);
-
-    thrust::device_vector<sigpt_t> lhs(a, a + a_n);
-    thrust::device_vector<sigpt_t> rhs(b, b + b_n);
-    thrust::device_vector<sigpt_t> out(4 * MAX(a_n, b_n));
-
-    stl_and(lhs, rhs, out);
-
-    thrust::host_vector<sigpt_t> host_out(out);
-
-    int c_n = read_signal_file(SIG_PATH "/and-test-breach-result.txt", &c);
-    fail_unless(c_n != -1);
-
-    fail_unless(sigcmp(c, host_out.data(), MAX(c_n, host_out.size())) == 0);
-
-    free(a);
-    free(b);
-    free(c);
-}
-END_TEST
+AND_TEST(test_sig1, "and-test-sig1.txt", "and-test-sig2.txt", "and-test-breach-result.txt")
 
 static Suite *
 create_suite(void)
