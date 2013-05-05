@@ -97,6 +97,7 @@ START_TEST(test_sanity)
 END_TEST
 
 AND_TEST(test_sig1, "and-test-sig1.txt", "and-test-sig2.txt", "and-test-breach-result.txt")
+AND_TEST(test_sig2, "and-test2-sig1.txt", "and-test2-sig2.txt", "and-test2-breach-result.txt")
 
 static Suite *
 create_suite(void)
@@ -106,6 +107,7 @@ create_suite(void)
 
     tcase_add_test(tc_core, test_sanity);
     tcase_add_test(tc_core, test_sig1);
+    tcase_add_test(tc_core, test_sig2);
 
     suite_add_tcase(s, tc_core);
 
