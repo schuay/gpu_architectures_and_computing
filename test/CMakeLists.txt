@@ -1,5 +1,5 @@
 if (NOT SIG_PATH)
-    set(SIG_PATH ${CMAKE_SOURCE_DIR}/matlab/cuda_impl)
+    set(SIG_PATH ${CMAKE_SOURCE_DIR}/matlab/traces)
 endif()
 
 configure_file(
