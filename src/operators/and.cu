@@ -248,9 +248,12 @@ struct sigpt_min : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
  * sizeof(out) = 4 * max(sizeof(lhs), sizeof(rhs)).
  */
 void
-stl_and(const thrust::device_vector<sigpt_t> &lhs,
-        const thrust::device_vector<sigpt_t> &rhs,
-        thrust::device_vector<sigpt_t> &out)
+stl_and(const thrust::device_ptr<sigpt_t> &lhs,
+        const int nlhs,
+        const thrust::device_ptr<sigpt_t> &rhs,
+        const int nrhs,
+        thrust::device_ptr<sigpt_t> *out,
+        int *nout)
 {
     /* A rough outline of the function:
      *
@@ -266,17 +269,15 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     /* First, extract the time sequences, merge them. */
 
-    const sigpt_t *ptr_lhs = thrust::raw_pointer_cast(lhs.data());
-    thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(lhs.size());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_lhs, lhs_ts.get(), lhs.size(), FLAG_LHS);
+    thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(nlhs);
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(lhs.get(), lhs_ts.get(), nlhs, FLAG_LHS);
 
-    const sigpt_t *ptr_rhs = thrust::raw_pointer_cast(rhs.data());
-    thrust::device_ptr<seqpt_t> rhs_ts = thrust::device_malloc<seqpt_t>(rhs.size());
-    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(ptr_rhs, rhs_ts.get(), rhs.size(), FLAG_RHS);
+    thrust::device_ptr<seqpt_t> rhs_ts = thrust::device_malloc<seqpt_t>(nrhs);
+    sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(rhs.get(), rhs_ts.get(), nrhs, FLAG_RHS);
 
-    int n_ts = rhs.size() + lhs.size();
+    int n_ts = nrhs + nlhs;
     thrust::device_ptr<seqpt_t> ts = thrust::device_malloc<seqpt_t>(n_ts);
-    thrust::merge(lhs_ts, lhs_ts + lhs.size(), rhs_ts, rhs_ts + rhs.size(),
+    thrust::merge(lhs_ts, lhs_ts + nrhs, rhs_ts, rhs_ts + nrhs,
                   ts, seqpt_less());
 
     /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
@@ -318,8 +319,8 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
      * pair.
      */
 
-    calc_intersections<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, tsi.get(),
-                                              lhs.size(), rhs.size(), n_tsi);
+    calc_intersections<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), tsi.get(),
+                                              nlhs, nrhs, n_tsi);
 
     /* Finally we again remove all duplicate elements (= all proto-intersections
      * which did not turn out to actually be real intersections).
@@ -336,28 +337,31 @@ stl_and(const thrust::device_vector<sigpt_t> &lhs,
 
     thrust::device_ptr<sigpt_t> lhs_extrapolated = thrust::device_malloc<sigpt_t>(n_tsi);
     thrust::device_ptr<sigpt_t> rhs_extrapolated = thrust::device_malloc<sigpt_t>(n_tsi);
-    sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(ptr_lhs, ptr_rhs, tsi.get(),
+    sigpt_extrapolate<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), tsi.get(),
                                              lhs_extrapolated.get(), rhs_extrapolated.get(),
-                                             lhs.size(), rhs.size(), n_tsi);
+                                             nlhs, nrhs, n_tsi);
 
     /* And *finally* run the actual and operator. */
 
+    thrust::device_ptr<sigpt_t> dout = thrust::device_malloc<sigpt_t>(n_tsi);
     thrust::transform(lhs_extrapolated, lhs_extrapolated + n_tsi,
-                      rhs_extrapolated, out.begin(), sigpt_min());
+                      rhs_extrapolated, dout, sigpt_min());
 
-    out.resize(n_tsi);
+    *out = dout;
+    *nout = n_tsi;
+
     /* TODO: Instead of allocating all of these device vectors between 
      * kernel calls, try to be a bit smarter about it. For example,
      * we could queue the allocations on a separate stream. */
 
-/*    printf("lhs (%d):\n", lhs.size());
-    for (int i = 0; i < lhs.size() && i < 10; i++) {
+/*    printf("lhs (%d):\n", nlhs);
+    for (int i = 0; i < nlhs && i < 10; i++) {
         sigpt_t sigpt = lhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
-    printf("\nrhs (%d):\n", rhs.size());
-    for (int i = 0; i < rhs.size() && i < 10; i++) {
+    printf("\nrhs (%d):\n", nrhs);
+    for (int i = 0; i < nrhs && i < 10; i++) {
         sigpt_t sigpt = rhs[i];
     	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }

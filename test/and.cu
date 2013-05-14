@@ -25,16 +25,20 @@ START_TEST(name) \
  \
     thrust::device_vector<sigpt_t> lhs(a, a + a_n); \
     thrust::device_vector<sigpt_t> rhs(b, b + b_n); \
-    thrust::device_vector<sigpt_t> out(4 * MAX(a_n, b_n)); \
  \
-    stl_and(lhs, rhs, out); \
+    thrust::device_ptr<sigpt_t> out; \
+    int nout; \
  \
-    thrust::host_vector<sigpt_t> host_out(out); \
+    stl_and(&lhs[0], lhs.size(), &rhs[0], rhs.size(), &out, &nout); \
+ \
+    thrust::host_vector<sigpt_t> host_out(out, out + nout); \
  \
     int c_n = read_signal_file(SIG_PATH "/" fexpected, &c); \
     fail_unless(c_n != -1); \
  \
     fail_unless(sigcmp(c, host_out.data(), MAX(c_n, host_out.size())) == 0); \
+ \
+    thrust::device_free(out); \
  \
     free(a); \
     free(b); \
@@ -46,17 +50,19 @@ START_TEST(test_sanity)
 {
     sigpt_t *a = sigpt_random(42, NITEMS);
     sigpt_t *b = sigpt_random(43, NITEMS);
-    sigpt_t *c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
 
     thrust::device_vector<sigpt_t> lhs(a, a + NITEMS);
     thrust::device_vector<sigpt_t> rhs(b, b + NITEMS);
-    thrust::device_vector<sigpt_t> out(c, c + 4 * NITEMS);
 
-    stl_and(lhs, rhs, out);
+    thrust::device_ptr<sigpt_t> out;
+    int nout;
+
+    stl_and(&lhs[0], lhs.size(), &rhs[0], rhs.size(), &out, &nout);
+
+    thrust::device_free(out);
 
     free(a);
     free(b);
-    free(c);
 }
 END_TEST
 

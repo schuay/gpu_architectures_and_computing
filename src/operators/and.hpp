@@ -8,8 +8,11 @@ extern "C" {
 }
 
 void
-stl_and(const thrust::device_vector<sigpt_t> &lhs,
-        const thrust::device_vector<sigpt_t> &rhs,
-        thrust::device_vector<sigpt_t> &out);
+stl_and(const thrust::device_ptr<sigpt_t> &lhs,
+        const int nlhs,
+        const thrust::device_ptr<sigpt_t> &rhs,
+        const int nrhs,
+        thrust::device_ptr<sigpt_t> *out,
+        int *nout);
 
 #endif /* __AND_H */

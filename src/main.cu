@@ -60,7 +60,9 @@ and_test(const char* sig1_filename,
 
     	thrust::device_vector<sigpt_t> sig1(a, a + a_n);
     	thrust::device_vector<sigpt_t> sig2(b, b + b_n);
-    	thrust::device_vector<sigpt_t> d_result(c, c + 4 * max(a_n, b_n));
+
+    	thrust::device_ptr<sigpt_t> d_result;
+        int nout;
 
         cudaEvent_t start, stop;
 	    float elapsedTime;
@@ -70,7 +72,7 @@ and_test(const char* sig1_filename,
 	    checkCudaError(cudaEventCreate(&stop));
 	    checkCudaError(cudaEventRecord(start, 0));
 
-    	stl_and(sig1, sig2, d_result);
+    	stl_and(&sig1[0], sig1.size(), &sig2[0], sig2.size(), &d_result, &nout);
 
 	    checkCudaError(cudaEventRecord(stop, 0));
 	    checkCudaError(cudaEventSynchronize(stop));
@@ -80,7 +82,7 @@ and_test(const char* sig1_filename,
 
 	    printf("\tElapsed time: %f ms\n", elapsedTime);
 
-    	thrust::host_vector<sigpt_t> result(d_result);
+    	thrust::host_vector<sigpt_t> result(d_result, d_result + nout);
 
     	/* there must be a much better way to fetch data back to host */
     	//for (int i = 0; i < result.size(); i++)
@@ -88,6 +90,8 @@ and_test(const char* sig1_filename,
 
     	write_signal_file(result_filename,
     			result.data(), result.size());
+
+        thrust::device_free(d_result);
 
     	free(a);
     	free(b);
@@ -156,13 +160,15 @@ main(int argc, char **argv)
 
     thrust::device_vector<sigpt_t> lhs(a, a + NITEMS);
     thrust::device_vector<sigpt_t> rhs(b, b + NITEMS);
-    thrust::device_vector<sigpt_t> out(c, c + 4 * NITEMS);
+
+    thrust::device_ptr<sigpt_t> out;
+    int nout;
 
     checkCudaError(cudaEventCreate(&start));
     checkCudaError(cudaEventCreate(&stop));
     checkCudaError(cudaEventRecord(start, 0));
 
-    stl_and(lhs, rhs, out);
+    stl_and(&lhs[0], lhs.size(), &rhs[0], rhs.size(), &out, &nout);
 
     checkCudaError(cudaEventRecord(stop, 0));
     checkCudaError(cudaEventSynchronize(stop));
@@ -171,6 +177,8 @@ main(int argc, char **argv)
     checkCudaError(cudaEventDestroy(stop));
 
     printf("\n\nElapsed time: %f ms\n", elapsedTime);
+
+    thrust::device_free(out);
 
     free(a);
     free(b);
