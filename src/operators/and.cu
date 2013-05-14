@@ -6,6 +6,7 @@
 #include <thrust/unique.h>
 
 #include "globals.h"
+#include "interpolate.hpp"
 
 #define FLAG_LHS (1 << 0)
 #define FLAG_RHS (1 << 1)
@@ -26,26 +27,6 @@ struct seqpt_less : public thrust::binary_function<seqpt_t, seqpt_t, bool>
         return lhs.t < rhs.t;
     }
 };
-
-/**
- * Given a sequence point t with l.t <= t.t <= r.t,
- * returns an interpolated signal point at time t.t.
- */
-__device__ sigpt_t
-interpolate(const sigpt_t *l,
-            const sigpt_t *r,
-            const seqpt_t *t)
-{
-    const sigpt_t l_reg = *l;
-    const sigpt_t r_reg = *r;
-
-    const float dt = r_reg.t - l_reg.t;
-    const float dy = r_reg.y - l_reg.y;
-    const float dy_normed = dy / dt; /* TODO: Assumes dt != 0.f. */
-
-    sigpt_t sigpt = { t->t, l_reg.y + dy_normed * (t->t - l_reg.t), dy_normed };
-    return sigpt;
-}
 
 __global__ void
 sigpt_extrapolate(const sigpt_t *lhs,
@@ -79,7 +60,7 @@ sigpt_extrapolate(const sigpt_t *lhs,
         } else {
             lhs_extrapolated[i] = interpolate(lhs + assoc_lhs,
                                               lhs + assoc_lhs + 1,
-                                              &seqpt);
+                                              seqpt.t);
         }
 
         if (assoc_rhs >= n_rhs - 1) {
@@ -87,7 +68,7 @@ sigpt_extrapolate(const sigpt_t *lhs,
         } else {
             rhs_extrapolated[i] = interpolate(rhs + assoc_rhs,
                                               rhs + assoc_rhs + 1,
-                                              &seqpt);
+                                              seqpt.t);
         }
     }
 }
