@@ -8,7 +8,7 @@ extern "C" {
 }
 
 void
-stl_not(const thrust::device_vector<sigpt_t> &in,
-        thrust::device_vector<sigpt_t> &out);
+stl_not(const thrust::device_ptr<sigpt_t> &in,
+        thrust::device_ptr<sigpt_t> *out, int n);
 
 #endif /* __NOT_H */

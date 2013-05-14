@@ -1,10 +1,6 @@
 #include "not.hpp"
 
-void
-stl_not(const thrust::device_vector<sigpt_t> &in,
-        thrust::device_vector<sigpt_t> &out)
-{
-}
+#include "globals.h"
 
 /**
  * sizeof(out) == sizeof(in).
@@ -20,4 +16,16 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
         s.dy *= -1.f;
         out[i] = s;
     }
+}
+
+void
+stl_not(const thrust::device_ptr<sigpt_t> &in,
+        thrust::device_ptr<sigpt_t> *out, int n)
+{
+    const sigpt_t *ptr_in = thrust::raw_pointer_cast(in.get());
+    thrust::device_ptr<sigpt_t> ptr_out = thrust::device_malloc<sigpt_t>(n);
+
+    stl_not<<<NBLOCKS, NTHREADS>>>(ptr_in, thrust::raw_pointer_cast(ptr_out), n);
+
+    *out = ptr_out;
 }
