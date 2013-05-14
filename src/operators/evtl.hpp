@@ -8,7 +8,9 @@ extern "C" {
 }
 
 void
-stl_evtl(const thrust::device_vector<sigpt_t> &in,
-               thrust::device_vector<sigpt_t> &out);
+stl_evtl(const thrust::device_ptr<sigpt_t> &in,
+         const int nin,
+         thrust::device_ptr<sigpt_t> *out,
+         int *nout);
 
 #endif /* __EVTL_H */

@@ -111,7 +111,8 @@ eventually_test(const char* sig_filename,
 	int a_n = read_signal_file(sig_filename, &a);
 	if (a_n > 0) {
 		thrust::device_vector<sigpt_t> in(a, a + a_n);
-		thrust::device_vector<sigpt_t> out(a_n * 2);
+		thrust::device_ptr<sigpt_t> out;
+        int nout;
 
 	    cudaEvent_t start, stop;
 	    float elapsedTime;
@@ -121,7 +122,7 @@ eventually_test(const char* sig_filename,
 	    checkCudaError(cudaEventCreate(&stop));
 	    checkCudaError(cudaEventRecord(start, 0));
 
-		stl_evtl(in, out);
+		stl_evtl(&in[0], in.size(), &out, &nout);
 
 	    checkCudaError(cudaEventRecord(stop, 0));
 	    checkCudaError(cudaEventSynchronize(stop));
@@ -136,10 +137,12 @@ eventually_test(const char* sig_filename,
 		if (b == NULL)
 			return;
 
-		for (int i = 0; i < out.size(); i++)
+		for (int i = 0; i < nout; i++)
 			b[i] = out[i];
 
-		write_signal_file(result_filename, b, out.size());
+		write_signal_file(result_filename, b, nout);
+
+        thrust::device_free(out);
 
 		free(a);
 		free(b);

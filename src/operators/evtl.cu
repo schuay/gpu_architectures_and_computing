@@ -47,31 +47,37 @@ eventually_compact(const sigpt_t *zs, sigpt_t *zs_final, const char *cs, const s
     }
 }
 
-/**
- * sizeof(out) = 2 * sizeof(in).
- */
 void
-stl_evtl(const thrust::device_vector<sigpt_t> &in,
-               thrust::device_vector<sigpt_t> &out)
+stl_evtl(const thrust::device_ptr<sigpt_t> &in,
+         const int nin,
+         thrust::device_ptr<sigpt_t> *out,
+         int *nout)
 {
-    thrust::inclusive_scan(in.crbegin(), in.crend(), out.rbegin() + in.size(), sigpt_max()); 
+    const int dnout = 2 * nin;
+    thrust::device_ptr<sigpt_t> dout = thrust::device_malloc<sigpt_t>(dnout);
 
-    const sigpt_t *ys = thrust::raw_pointer_cast(in.data());
+    thrust::reverse_iterator<thrust::device_ptr<sigpt_t> > rin(in + nin);
+    thrust::reverse_iterator<thrust::device_ptr<sigpt_t> > rout(dout + dnout);
 
-    thrust::device_vector<sigpt_t> out_intersect(in.size() * 2);
+    thrust::inclusive_scan(rin, rin + nin, rout + nin, sigpt_max()); 
+
+    const sigpt_t *ys = in.get();
+
+    thrust::device_vector<sigpt_t> out_intersect(dnout);
     sigpt_t *zs = thrust::raw_pointer_cast(out_intersect.data());
 
-    sigpt_t *zs_final = thrust::raw_pointer_cast(out.data());
+    sigpt_t *zs_final = dout.get();
 
-    thrust::device_vector<char> used(in.size() * 2, 0);
+    thrust::device_vector<char> used(dnout, 0);
     char *cs = thrust::raw_pointer_cast(used.data());
-    eventually_intersect<<<NBLOCKS, NTHREADS>>>(ys, zs_final, zs, cs, in.size());
+    eventually_intersect<<<NBLOCKS, NTHREADS>>>(ys, zs_final, zs, cs, nin);
 
-    thrust::device_vector<size_t> positions(in.size() * 2, 0);
+    thrust::device_vector<size_t> positions(dnout, 0);
     thrust::exclusive_scan(used.cbegin(), used.cend(), positions.begin(), 0, thrust::plus<size_t>()); 
 
     size_t *fs = thrust::raw_pointer_cast(positions.data());
-    eventually_compact<<<NBLOCKS, NTHREADS>>>(zs, zs_final, cs, fs, in.size() * 2);
+    eventually_compact<<<NBLOCKS, NTHREADS>>>(zs, zs_final, cs, fs, dnout);
 
-    out.resize(positions.back());
+    *out = dout;
+    *nout = positions.back(); /* Note that we don't actually resize here. */
 }

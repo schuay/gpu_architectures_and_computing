@@ -22,16 +22,18 @@ START_TEST(name) \
     fail_unless(in_n != -1); \
  \
     thrust::device_vector<sigpt_t> vin(in, in + in_n); \
-    thrust::device_vector<sigpt_t> vout(2 * in_n); \
+    thrust::device_ptr<sigpt_t> vout; \
+    int nout; \
  \
-    stl_evtl(vin, vout); \
+    stl_evtl(&vin[0], vin.size(), &vout, &nout); \
  \
-    thrust::host_vector<sigpt_t> host_out(vout); \
+    thrust::host_vector<sigpt_t> host_out(vout, vout + nout); \
  \
     int out_n = read_signal_file(SIG_PATH "/" fexpected, &out); \
     fail_unless(out_n != -1); \
  \
     fail_unless(sigcmp(out, host_out.data(), MAX(out_n, host_out.size())) == 0); \
+    thrust::device_free(vout); \
  \
     free(in); \
     free(out); \
@@ -41,15 +43,16 @@ END_TEST
 START_TEST(test_sanity)
 {
     sigpt_t *a = sigpt_random(42, NITEMS);
-    sigpt_t *c = (sigpt_t *)calloc(2 * NITEMS,sizeof(sigpt_t));
 
     thrust::device_vector<sigpt_t> in(a, a + NITEMS);
-    thrust::device_vector<sigpt_t> out(c, c + 2 * NITEMS);
+    thrust::device_ptr<sigpt_t> out;
+    int nout;
 
-    stl_evtl(in, out);
+    stl_evtl(&in[0], NITEMS, &out, &nout);
+
+    thrust::device_free(out);
 
     free(a);
-    free(c);
 }
 END_TEST
 
