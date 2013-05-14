@@ -17,6 +17,7 @@ cuda_add_executable(and_test
     and.cu
     ${CMAKE_SOURCE_DIR}/src/sigpt.c
     ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/test/sigcmp.c
 )
 target_link_libraries(and_test stl_and ${CHECK_LIBRARIES})
 add_test(and_test ${CMAKE_CURRENT_BINARY_DIR}/and_test)
@@ -25,6 +26,7 @@ cuda_add_executable(evtl_test
     evtl.cu
     ${CMAKE_SOURCE_DIR}/src/sigpt.c
     ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/test/sigcmp.c
 )
 target_link_libraries(evtl_test stl_evtl ${CHECK_LIBRARIES})
 add_test(evtl_test ${CMAKE_CURRENT_BINARY_DIR}/evtl_test)
