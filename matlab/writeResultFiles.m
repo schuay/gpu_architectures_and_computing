@@ -3,7 +3,7 @@ if ~ exist('resultArray', 'var')
 end
 
 
-for r = resultFile
+for r = resultArray
     fprintf('writing file %s:\n', r.name);
-    writeFile(r.name, [r.time ; r.X]);
+    writeSignal(r.name, [r.time ; r.X]);
 end
