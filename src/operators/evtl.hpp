@@ -8,7 +8,7 @@ extern "C" {
 }
 
 void
-stl_eventually(const thrust::device_vector<sigpt_t> &in,
+stl_evtl(const thrust::device_vector<sigpt_t> &in,
                thrust::device_vector<sigpt_t> &out);
 
 #endif /* __EVTL_H */

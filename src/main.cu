@@ -117,7 +117,7 @@ eventually_test(const char* sig_filename,
 	    checkCudaError(cudaEventCreate(&stop));
 	    checkCudaError(cudaEventRecord(start, 0));
 
-		stl_eventually(in, out);
+		stl_evtl(in, out);
 
 	    checkCudaError(cudaEventRecord(stop, 0));
 	    checkCudaError(cudaEventSynchronize(stop));

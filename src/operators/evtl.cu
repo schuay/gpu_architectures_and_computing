@@ -51,7 +51,7 @@ eventually_compact(const sigpt_t *zs, sigpt_t *zs_final, const char *cs, const s
  * sizeof(out) = 2 * sizeof(in).
  */
 void
-stl_eventually(const thrust::device_vector<sigpt_t> &in,
+stl_evtl(const thrust::device_vector<sigpt_t> &in,
                thrust::device_vector<sigpt_t> &out)
 {
     thrust::inclusive_scan(in.crbegin(), in.crend(), out.rbegin() + in.size(), sigpt_max()); 
