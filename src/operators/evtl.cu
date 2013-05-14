@@ -22,13 +22,13 @@ eventually_intersect(const sigpt_t *ys, sigpt_t *zs, sigpt_t *zs_intersect, char
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         cs[i * 2] = 1;
-	zs_intersect[i * 2] = zs[i];
+    zs_intersect[i * 2] = zs[i];
         // FIXME: Branches are bad.
         if (i < n - 1 && zs[i].y > zs[i + 1].y) {
             cs[i * 2 + 1] = 1;
             zs_intersect[i * 2 + 1].t = zs[i + 1].t +
-		    (zs[i + 1].t - zs[i].t) *
-		    (zs[i + 1].y - ys[i + 1].y) / (ys[i + 1].y - ys[i].y);
+            (zs[i + 1].t - zs[i].t) *
+            (zs[i + 1].y - ys[i + 1].y) / (ys[i + 1].y - ys[i].y);
             zs_intersect[i * 2 + 1].y = zs[i + 1].y;
         }
     }

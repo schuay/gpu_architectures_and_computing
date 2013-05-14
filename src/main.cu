@@ -43,7 +43,7 @@ _checkCudaError(cudaError_t result,
 void
 and_test(const char* sig1_filename,
          const char* sig2_filename,
-		 const char* result_filename)
+         const char* result_filename)
 {
     sigpt_t *a;
     sigpt_t *b;
@@ -54,50 +54,50 @@ and_test(const char* sig1_filename,
     a_n = read_signal_file(sig1_filename, &a);
     b_n = read_signal_file(sig2_filename, &b);
     if (a_n > 0 && b_n > 0) {
-    	c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
-    	if (c == NULL)
-    		return;
+        c = (sigpt_t *)calloc(4 * NITEMS,sizeof(sigpt_t));
+        if (c == NULL)
+            return;
 
-    	thrust::device_vector<sigpt_t> sig1(a, a + a_n);
-    	thrust::device_vector<sigpt_t> sig2(b, b + b_n);
+        thrust::device_vector<sigpt_t> sig1(a, a + a_n);
+        thrust::device_vector<sigpt_t> sig2(b, b + b_n);
 
-    	thrust::device_ptr<sigpt_t> d_result;
+        thrust::device_ptr<sigpt_t> d_result;
         int nout;
 
         cudaEvent_t start, stop;
-	    float elapsedTime;
+        float elapsedTime;
 
 
-	    checkCudaError(cudaEventCreate(&start));
-	    checkCudaError(cudaEventCreate(&stop));
-	    checkCudaError(cudaEventRecord(start, 0));
+        checkCudaError(cudaEventCreate(&start));
+        checkCudaError(cudaEventCreate(&stop));
+        checkCudaError(cudaEventRecord(start, 0));
 
-    	stl_and(&sig1[0], sig1.size(), &sig2[0], sig2.size(), &d_result, &nout);
+        stl_and(&sig1[0], sig1.size(), &sig2[0], sig2.size(), &d_result, &nout);
 
-	    checkCudaError(cudaEventRecord(stop, 0));
-	    checkCudaError(cudaEventSynchronize(stop));
-	    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
-	    checkCudaError(cudaEventDestroy(start));
-	    checkCudaError(cudaEventDestroy(stop));
+        checkCudaError(cudaEventRecord(stop, 0));
+        checkCudaError(cudaEventSynchronize(stop));
+        checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
+        checkCudaError(cudaEventDestroy(start));
+        checkCudaError(cudaEventDestroy(stop));
 
-	    printf("\tElapsed time: %f ms\n", elapsedTime);
+        printf("\tElapsed time: %f ms\n", elapsedTime);
 
-    	thrust::host_vector<sigpt_t> result(d_result, d_result + nout);
+        thrust::host_vector<sigpt_t> result(d_result, d_result + nout);
 
-    	/* there must be a much better way to fetch data back to host */
-    	//for (int i = 0; i < result.size(); i++)
-    	//	c[i] = result[i];
+        /* there must be a much better way to fetch data back to host */
+        //for (int i = 0; i < result.size(); i++)
+        //    c[i] = result[i];
 
-    	write_signal_file(result_filename,
-    			result.data(), result.size());
+        write_signal_file(result_filename,
+                result.data(), result.size());
 
         thrust::device_free(d_result);
 
-    	free(a);
-    	free(b);
-    	free(c);
+        free(a);
+        free(b);
+        free(c);
     } else {
-    	fprintf(stderr, "couldn't open one of the test files\n");
+        fprintf(stderr, "couldn't open one of the test files\n");
     }
 }
 
@@ -105,50 +105,50 @@ void
 eventually_test(const char* sig_filename,
                 const char* result_filename)
 {
-	sigpt_t *a;
-	sigpt_t *b;
+    sigpt_t *a;
+    sigpt_t *b;
 
-	int a_n = read_signal_file(sig_filename, &a);
-	if (a_n > 0) {
-		thrust::device_vector<sigpt_t> in(a, a + a_n);
-		thrust::device_ptr<sigpt_t> out;
+    int a_n = read_signal_file(sig_filename, &a);
+    if (a_n > 0) {
+        thrust::device_vector<sigpt_t> in(a, a + a_n);
+        thrust::device_ptr<sigpt_t> out;
         int nout;
 
-	    cudaEvent_t start, stop;
-	    float elapsedTime;
+        cudaEvent_t start, stop;
+        float elapsedTime;
 
 
-	    checkCudaError(cudaEventCreate(&start));
-	    checkCudaError(cudaEventCreate(&stop));
-	    checkCudaError(cudaEventRecord(start, 0));
+        checkCudaError(cudaEventCreate(&start));
+        checkCudaError(cudaEventCreate(&stop));
+        checkCudaError(cudaEventRecord(start, 0));
 
-		stl_evtl(&in[0], in.size(), &out, &nout);
+        stl_evtl(&in[0], in.size(), &out, &nout);
 
-	    checkCudaError(cudaEventRecord(stop, 0));
-	    checkCudaError(cudaEventSynchronize(stop));
-	    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
-	    checkCudaError(cudaEventDestroy(start));
-	    checkCudaError(cudaEventDestroy(stop));
+        checkCudaError(cudaEventRecord(stop, 0));
+        checkCudaError(cudaEventSynchronize(stop));
+        checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
+        checkCudaError(cudaEventDestroy(start));
+        checkCudaError(cudaEventDestroy(stop));
 
-	    printf("\tElapsed time: %f ms\n", elapsedTime);
+        printf("\tElapsed time: %f ms\n", elapsedTime);
 
 
-		b = (sigpt_t *)calloc(a_n * 2, sizeof(sigpt_t));
-		if (b == NULL)
-			return;
+        b = (sigpt_t *)calloc(a_n * 2, sizeof(sigpt_t));
+        if (b == NULL)
+            return;
 
-		for (int i = 0; i < nout; i++)
-			b[i] = out[i];
+        for (int i = 0; i < nout; i++)
+            b[i] = out[i];
 
-		write_signal_file(result_filename, b, nout);
+        write_signal_file(result_filename, b, nout);
 
         thrust::device_free(out);
 
-		free(a);
-		free(b);
-	} else {
-		fprintf(stderr, "couldn't open test file\n");
-	}
+        free(a);
+        free(b);
+    } else {
+        fprintf(stderr, "couldn't open test file\n");
+    }
 }
 
 int

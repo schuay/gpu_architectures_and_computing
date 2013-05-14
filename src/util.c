@@ -25,11 +25,11 @@ int
 read_signal_file(const char *filename,
                  sigpt_t **signal)
 {
-	FILE *fh;
-	sigpt_t *s;
+    FILE *fh;
+    sigpt_t *s;
 
-	fh = fopen(filename, "r");
-	if (fh == NULL) {
+    fh = fopen(filename, "r");
+    if (fh == NULL) {
         return -1;
     }
 
@@ -64,10 +64,10 @@ write_signal_file(const char* filename,
                   const sigpt_t* signal,
                   int n)
 {
-	FILE *fh;
+    FILE *fh;
 
-	fh = fopen(filename, "w+");
-	if (fh == NULL) {
+    fh = fopen(filename, "w+");
+    if (fh == NULL) {
         return -1;
     }
 
@@ -76,5 +76,5 @@ write_signal_file(const char* filename,
     }
     fclose(fh);
 
-	return 0;
+    return 0;
 }

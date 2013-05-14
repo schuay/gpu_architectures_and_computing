@@ -357,37 +357,37 @@ stl_and(const thrust::device_ptr<sigpt_t> &lhs,
 /*    printf("lhs (%d):\n", nlhs);
     for (int i = 0; i < nlhs && i < 10; i++) {
         sigpt_t sigpt = lhs[i];
-    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+        printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\nrhs (%d):\n", nrhs);
     for (int i = 0; i < nrhs && i < 10; i++) {
         sigpt_t sigpt = rhs[i];
-    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+        printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\ntsi (%d):\n", n_tsi);
     for (int i = 0; i < n_tsi && i < 10; i++) {
-    	seqpt_t s = tsi[i];
-    	printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
+        seqpt_t s = tsi[i];
+        printf("{ %f, %d, %d, %x }\n", s.t, s.i, s.assoc_i, s.flags);
     }
 
     printf("\nlhs_extrapolated (%d):\n", n_tsi);
     for (int i = 0; i < n_tsi && i < 10; i++) {
         sigpt_t sigpt = lhs_extrapolated[i];
-    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+        printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\nrhs_extrapolated (%d):\n", n_tsi);
     for (int i = 0; i < n_tsi && i < 10; i++) {
         sigpt_t sigpt = rhs_extrapolated[i];
-    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+        printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 
     printf("\nresult (%d):\n", out.size());
     for (int i = 0; i < out.size() && i < 10; i++) {
         sigpt_t sigpt = out[i];
-    	printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+        printf("%i: {%f, %f, %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
     }
 */
     thrust::device_free(lhs_ts);
