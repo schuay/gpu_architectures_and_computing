@@ -39,3 +39,12 @@ cuda_add_executable(not_test
 )
 target_link_libraries(not_test stl_not ${CHECK_LIBRARIES})
 add_test(not_test ${CMAKE_CURRENT_BINARY_DIR}/not_test)
+
+cuda_add_executable(or_test
+    or.cu
+    ${CMAKE_SOURCE_DIR}/src/sigpt.c
+    ${CMAKE_SOURCE_DIR}/src/util.c
+    ${CMAKE_SOURCE_DIR}/test/sigcmp.c
+)
+target_link_libraries(or_test stl_or ${CHECK_LIBRARIES})
+add_test(or_test ${CMAKE_CURRENT_BINARY_DIR}/or_test)
