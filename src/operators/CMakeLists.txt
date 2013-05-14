@@ -1,3 +1,5 @@
 cuda_add_library(stl_and and.cu)
 cuda_add_library(stl_evtl evtl.cu)
 cuda_add_library(stl_not not.cu)
+cuda_add_library(stl_or or.cu)
+target_link_libraries(stl_or stl_and stl_not)
