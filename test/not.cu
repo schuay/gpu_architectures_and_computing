@@ -24,8 +24,9 @@ START_TEST(name) \
     thrust::device_vector<sigpt_t> vin(in, in + in_n); \
  \
     thrust::device_ptr<sigpt_t> pout; \
+    int npout; \
  \
-    stl_not(&vin[0], &pout, in_n); \
+    stl_not(&vin[0], in_n, &pout, &npout); \
  \
     thrust::host_vector<sigpt_t> host_out(pout, pout + in_n); \
  \
@@ -48,8 +49,9 @@ START_TEST(test_sanity)
     thrust::device_vector<sigpt_t> in(a, a + NITEMS);
 
     thrust::device_ptr<sigpt_t> out;
+    int nout;
 
-    stl_not(&in[0], &out, NITEMS);
+    stl_not(&in[0], NITEMS, &out, &nout);
 
     thrust::device_free(out);
 

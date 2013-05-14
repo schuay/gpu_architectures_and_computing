@@ -20,12 +20,14 @@ stl_not(const sigpt_t *in, sigpt_t *out, int n)
 
 void
 stl_not(const thrust::device_ptr<sigpt_t> &in,
-        thrust::device_ptr<sigpt_t> *out, int n)
+        const int nin,
+        thrust::device_ptr<sigpt_t> *out,
+        int *nout)
 {
-    const sigpt_t *ptr_in = thrust::raw_pointer_cast(in.get());
-    thrust::device_ptr<sigpt_t> ptr_out = thrust::device_malloc<sigpt_t>(n);
+    thrust::device_ptr<sigpt_t> ptr_out = thrust::device_malloc<sigpt_t>(nin);
 
-    stl_not<<<NBLOCKS, NTHREADS>>>(ptr_in, thrust::raw_pointer_cast(ptr_out), n);
+    stl_not<<<NBLOCKS, NTHREADS>>>(in.get(), ptr_out.get(), nin);
 
     *out = ptr_out;
+    *nout = nin;
 }
