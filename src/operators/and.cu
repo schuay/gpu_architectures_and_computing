@@ -164,8 +164,7 @@ calc_intersections(const sigpt_t *lhs,
          * x = ((x1y2 - y1x2)(x3 - x4) - (x1 - x2)(x3y4 - y3x4)) /
          *     ((x1 - x2)(y3 - y4) - (y1 - y2)(x3 - x4)).
          * If the denominator is 0, the lines are parallel. We only
-         * care about intersections in a specific interval - if 
-         * there is none, we mark the element with FLAG_DEL.
+         * care about intersections in a specific interval.
          */
 
         if ((is_lhs && (s.i > n_lhs - 2 || s.assoc_i > n_rhs - 2)) ||
