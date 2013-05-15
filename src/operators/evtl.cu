@@ -4,8 +4,6 @@
 
 #include "globals.h"
 
-#define CUDA_MAX(a, b) (((a) > (b)) * (a) + ((a) <= (b)) * (b))
-
 struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
 {
     __device__ sigpt_t
