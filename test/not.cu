@@ -34,7 +34,7 @@ START_TEST(name) \
     int out_n = read_signal_file(SIG_PATH "/" fexpected, &out); \
     fail_unless(out_n != -1); \
  \
-    fail_unless(sigcmp(out, host_out.data(), MAX(out_n, host_out.size())) == 0); \
+    fail_unless(sigcmp(out, out_n, host_out.data(), host_out.size()) == 0); \
  \
     thrust::device_free(pout); \
  \
