@@ -57,7 +57,7 @@ sigpt_extrapolate(const sigpt_t *lhs,
         /* TODO: Optimize. */
 
         if (assoc_lhs >= n_lhs - 1) {
-            lhs_extrapolated[i] = (sigpt_t){ seqpt.t, lhs[i].y, lhs[i].dy };
+            lhs_extrapolated[i] = (sigpt_t){ seqpt.t, lhs[assoc_lhs].y, lhs[assoc_lhs].dy };
         } else {
             lhs_extrapolated[i] = interpolate(lhs + assoc_lhs,
                                               lhs + assoc_lhs + 1,
@@ -65,7 +65,7 @@ sigpt_extrapolate(const sigpt_t *lhs,
         }
 
         if (assoc_rhs >= n_rhs - 1) {
-            rhs_extrapolated[i] = (sigpt_t){ seqpt.t, rhs[i].y, rhs[i].dy };
+            rhs_extrapolated[i] = (sigpt_t){ seqpt.t, rhs[assoc_rhs].y, rhs[assoc_rhs].dy };
         } else {
             rhs_extrapolated[i] = interpolate(rhs + assoc_rhs,
                                               rhs + assoc_rhs + 1,
