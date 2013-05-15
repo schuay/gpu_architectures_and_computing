@@ -24,7 +24,7 @@ START_TEST(name) \
  \
     thrust::device_vector<sigpt_t> vin(in, in + in_n); \
     thrust::device_ptr<sigpt_t> vout; \
-    int nout; \
+    int nout = 0; \
  \
     stl_bevtl(&vin[0], vin.size(), s, t, &vout, &nout); \
  \

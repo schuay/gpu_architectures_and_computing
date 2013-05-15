@@ -27,7 +27,7 @@ START_TEST(name) \
     thrust::device_vector<sigpt_t> rhs(b, b + b_n); \
  \
     thrust::device_ptr<sigpt_t> out; \
-    int nout; \
+    int nout = 0; \
  \
     stl_until(&lhs[0], lhs.size(), &rhs[0], rhs.size(), &out, &nout); \
  \
