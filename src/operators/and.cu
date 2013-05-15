@@ -1,5 +1,6 @@
 #include "and.hpp"
 
+#include <math.h>
 #include <thrust/functional.h>
 #include <thrust/merge.h>
 #include <thrust/scan.h>
@@ -203,7 +204,7 @@ struct seqpt_same_time : public thrust::binary_function<seqpt_t, seqpt_t, bool>
     __device__ bool
     operator()(const seqpt_t &lhs, const seqpt_t &rhs) const
     {
-        return abs(lhs.t - rhs.t) < FLOAT_DELTA;
+        return fabsf(lhs.t - rhs.t) < FLOAT_DELTA;
     }
 };
 
