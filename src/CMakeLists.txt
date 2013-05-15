@@ -15,6 +15,7 @@ target_link_libraries(gpuac
     stl_and
     stl_evtl
     stl_not
+    stl_or
 )
 
 add_subdirectory(operators)
