@@ -15,7 +15,7 @@ extern "C" {
 #include "globals.h"
 
 #define NITEMS (256 * 257)
-#define TESTFILES_PATH "matlab/cuda_impl/"
+#define TESTFILES_PATH "matlab/traces/"
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
@@ -188,57 +188,22 @@ main(int argc, char **argv)
     free(c);
 
     printf("run AND test 1\n");
-    and_test(TESTFILES_PATH "and-test-sig1.txt",
-            TESTFILES_PATH "and-test-sig2.txt",
-            TESTFILES_PATH "and-test-gpu-result.txt");
+    and_test(TESTFILES_PATH "sig01.trace",
+             TESTFILES_PATH "sig02.trace",
+             TESTFILES_PATH "and_sig01_sig02.gpu.trace");
 
     printf("run AND test 2\n");
-    and_test(TESTFILES_PATH "and-test2-sig1.txt",
-            TESTFILES_PATH "and-test2-sig2.txt",
-            TESTFILES_PATH "and-test2-gpu-result.txt");
-
-    printf("run AND test 3 (100) \n");
-    and_test(TESTFILES_PATH "and-test3-100-sig1.txt",
-            TESTFILES_PATH "and-test3-100-sig2.txt",
-            TESTFILES_PATH "and-test3-100-gpu-result.txt");
-
-    printf("run AND test 3 (1000) \n");
-    and_test(TESTFILES_PATH "and-test3-1000-sig1.txt",
-            TESTFILES_PATH "and-test3-1000-sig2.txt",
-            TESTFILES_PATH "and-test3-1000-gpu-result.txt");
-
-    printf("run AND test 3 (10000) \n");
-    and_test(TESTFILES_PATH "and-test3-10000-sig1.txt",
-            TESTFILES_PATH "and-test3-10000-sig2.txt",
-            TESTFILES_PATH "and-test3-10000-gpu-result.txt");
+    and_test(TESTFILES_PATH "sig03.trace",
+             TESTFILES_PATH "sig04.trace",
+             TESTFILES_PATH "and_sig03_sig04.gpu.trace");
 
     printf("run EVENTUALLY test 1\n");
-    eventually_test(TESTFILES_PATH "eventually-test-sig.txt",
-                   TESTFILES_PATH "eventually-test-gpu-result.txt");
+    eventually_test(TESTFILES_PATH "sig05.trace",
+                    TESTFILES_PATH "ev_sig05.gpu.trace");
 
     printf("run EVENTUALLY test 2\n");
-    eventually_test(TESTFILES_PATH "eventually-test2-sig.txt",
-                   TESTFILES_PATH "eventually-test2-gpu-result.txt");
-
-    printf("run EVENTUALLY test 3 (100) \n");
-    eventually_test(TESTFILES_PATH "eventually-test3-100-sig.txt",
-                   TESTFILES_PATH "eventually-test3-100-gpu-result.txt");
-
-    printf("run EVENTUALLY test 3 (1000) \n");
-    eventually_test(TESTFILES_PATH "eventually-test3-1000-sig.txt",
-                   TESTFILES_PATH "eventually-test3-1000-gpu-result.txt");
-
-    printf("run EVENTUALLY test 3 (10000) \n");
-    eventually_test(TESTFILES_PATH "eventually-test3-10000-sig.txt",
-                   TESTFILES_PATH "eventually-test3-10000-gpu-result.txt");
-
-    printf("run EVENTUALLY test 3 (100000) \n");
-    eventually_test(TESTFILES_PATH "eventually-test3-100000-sig.txt",
-                   TESTFILES_PATH "eventually-test3-100000-gpu-result.txt");
-
-    printf("run EVENTUALLY test 3 (1000000) \n");
-    eventually_test(TESTFILES_PATH "eventually-test3-1000000-sig.txt",
-                   TESTFILES_PATH "eventually-test3-1000000-gpu-result.txt");
+    eventually_test(TESTFILES_PATH "sig06.trace",
+                    TESTFILES_PATH "ev_sig06.gpu.trace");
 
     return 0;
 }
