@@ -50,10 +50,10 @@ sigcmp(const sigpt_t *lhs,
         /* Note: dy is ignored for now because it's missing in the breach signal traces. */
         if (!FLOAT_ROUGHLY_EQUALS(l->t, r->t) ||
                 !FLOAT_ROUGHLY_EQUALS(l->y, r->y)) {
-            fprintf(stderr, "lhs[%d]: { t: %f, y: %f, dy: %f } != "
-                            "rhs[%d]: { t: %f, y: %f, dy: %f }\n",
-                    i, l->t, l->y, l->dy,
-                    j, r->t, r->y, r->dy);
+            fprintf(stderr, "lhs[%d]%s: { t: %f, y: %f, dy: %f } != "
+                            "rhs[%d]%s: { t: %f, y: %f, dy: %f }\n",
+                    i, (l == &interpolated) ? " interpolated" : "" , l->t, l->y, l->dy,
+                    j, (r == &interpolated) ? " interpolated" : "" , r->t, r->y, r->dy);
             return -1;
         }
 
