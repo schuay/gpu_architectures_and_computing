@@ -278,17 +278,24 @@ stl_and(const thrust::device_ptr<sigpt_t> &lhs,
 
     merge_i<<<NBLOCKS, NTHREADS>>>(lhs_i_max.get(), rhs_i_max.get(), ts.get(), n_ts);
 
-    /* Remove duplicates. */
+    /* Remove duplicates. Again, this is less trivial than it looks at first. If
+     * we need to keep the *last* element of each run of equal elements in order
+     * to pick up the correct associated index at points in time where both LHS
+     * and RHS are defined. Therefore, run unique() with a reverse iterator
+     * and use some pointer arithmetic to address the compacted range afterwards.
+     */
 
-    thrust::device_ptr<seqpt_t> ts_end =
-        thrust::unique(ts, ts + n_ts, seqpt_same_time());
-    n_ts = ts_end - ts;
+    thrust::reverse_iterator<thrust::device_ptr<seqpt_t> > rts(ts + n_ts);
+    thrust::reverse_iterator<thrust::device_ptr<seqpt_t> > rts_end =
+        thrust::unique(rts, rts + n_ts, seqpt_same_time());
+    const int n_rts = rts_end - rts;
+
 
     /* Add a proto-intersection after each point in the resulting sequence. */
 
-    int n_tsi = n_ts * 2;
+    int n_tsi = n_rts * 2;
     thrust::device_ptr<seqpt_t> tsi = thrust::device_malloc<seqpt_t>(n_tsi);
-    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get(), tsi.get(), n_ts);
+    insert_proto_intersections<<<NBLOCKS, NTHREADS>>>(ts.get() + n_ts - n_rts, tsi.get(), n_rts);
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
      * we set the time accordingly, and if there isn't, we mark it as DEL.
