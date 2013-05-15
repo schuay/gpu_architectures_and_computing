@@ -29,7 +29,7 @@ struct seqpt_less : public thrust::binary_function<seqpt_t, seqpt_t, bool>
     }
 };
 
-__global__ void
+__global__ static void
 sigpt_extrapolate(const sigpt_t *lhs,
                   const sigpt_t *rhs,
                   const seqpt_t *ts,
@@ -74,7 +74,7 @@ sigpt_extrapolate(const sigpt_t *lhs,
     }
 }
 
-__global__ void
+__global__ static void
 extract_i(const seqpt_t *in, int *out, int n, int flag)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -86,7 +86,7 @@ extract_i(const seqpt_t *in, int *out, int n, int flag)
     }
 }
 
-__global__ void
+__global__ static void
 merge_i(const int *lhs, const int *rhs, seqpt_t *out, int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -99,7 +99,7 @@ merge_i(const int *lhs, const int *rhs, seqpt_t *out, int n)
     }
 }
 
-__global__ void
+__global__ static void
 sigpt_to_seqpt(const sigpt_t *in, seqpt_t *out, int n, int flags)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -110,7 +110,7 @@ sigpt_to_seqpt(const sigpt_t *in, seqpt_t *out, int n, int flags)
     }
 }
 
-__global__ void
+__global__ static void
 insert_proto_intersections(const seqpt_t *in, seqpt_t *out, int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -124,7 +124,7 @@ insert_proto_intersections(const seqpt_t *in, seqpt_t *out, int n)
     }
 }
 
-__global__ void
+__global__ static void
 calc_intersections(const sigpt_t *lhs,
                    const sigpt_t *rhs,
                    seqpt_t *ts,
@@ -224,10 +224,6 @@ struct sigpt_min : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
     }
 };
 
-
-/**
- * sizeof(out) = 4 * max(sizeof(lhs), sizeof(rhs)).
- */
 void
 stl_and(const thrust::device_ptr<sigpt_t> &lhs,
         const int nlhs,
@@ -380,4 +376,3 @@ stl_and(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_free(lhs_extrapolated);
     thrust::device_free(rhs_extrapolated);
 }
-

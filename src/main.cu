@@ -22,7 +22,7 @@ extern "C" {
 
 /* TODO: Handle multiple GPUs. */
 
-bool
+static bool
 _checkCudaError(cudaError_t result,
                 const char *func,
                 const char *file,
@@ -37,10 +37,7 @@ _checkCudaError(cudaError_t result,
     }
 }
 
-/**
- * test functions
- */
-void
+static void
 and_test(const char* sig1_filename,
          const char* sig2_filename,
          const char* result_filename)
@@ -101,7 +98,7 @@ and_test(const char* sig1_filename,
     }
 }
 
-void
+static void
 eventually_test(const char* sig_filename,
                 const char* result_filename)
 {
