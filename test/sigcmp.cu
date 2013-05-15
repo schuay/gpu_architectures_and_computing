@@ -1,9 +1,10 @@
-#include "sigcmp.h"
+#include "sigcmp.hpp"
 
 #include <stdio.h>
 #include <math.h>
 
-/* TODO why do we have such big differences ??? at least with 0.05 it' ok, but... */
+#include "interpolate.hpp"
+
 #define FLOAT_EQUALS(x, y) (fabs((x) - (y)) < 0.05)
 
 int

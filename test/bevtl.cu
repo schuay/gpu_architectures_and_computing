@@ -6,10 +6,11 @@ extern "C" {
 #include <string.h>
 
 #include "config.h"
-#include "sigcmp.h"
 #include "sigpt.h"
 #include "util.h"
 }
+
+#include "sigcmp.hpp"
 
 #define NITEMS (42)
 
