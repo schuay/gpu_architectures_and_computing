@@ -57,8 +57,8 @@ START_TEST(test_sanity)
 }
 END_TEST
 
-EVTL_TEST(test_sig1, "sig05.trace", "ev_sig05.breach.trace")
-EVTL_TEST(test_sig2, "sig06.trace", "ev_sig06.breach.trace")
+EVTL_TEST(test_sig1, "sig05.trace", "evtl_sig05.breach.trace")
+EVTL_TEST(test_sig2, "sig06.trace", "evtl_sig06.breach.trace")
 
 static Suite *
 create_suite(void)

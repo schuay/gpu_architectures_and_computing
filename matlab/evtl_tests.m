@@ -18,6 +18,8 @@ traj.time = sig1.time;
 traj.X = sig1.X;
 
 traj.param = Sys.p;
+P = CreateParamSet(Sys);
+P.pts = traj.param';
 P.traj = traj;
 
 % define eventually formula
@@ -34,7 +36,7 @@ axis([0 3 -1 3.5]);
 grid on;
 
 % plot gpu result
-gpuacTrace = [TRACE_PATH 'ev_sig05.gpuac.trace'];
+gpuacTrace = [TRACE_PATH 'evtl_sig05.gpuac.trace'];
 if exist(gpuacTrace, 'file')
     gpu = readSignal(gpuacTrace);
     subplot(2,1,2);
@@ -45,7 +47,7 @@ end
 
 % save result
 %writeSignal('eventually-test-breach-result.txt', [val.time ; val.X]);
-val.name = [TRACE_PATH 'ev_sig05.breach.trace'];
+val.name = [TRACE_PATH 'evtl_sig05.breach.trace'];
 resultArray = [resultArray val];
 
 
@@ -69,7 +71,7 @@ val = QMITL_Eval2raw(Sys, phi_ev, traj);
 
 % save signals
 writeSignal([TRACE_PATH 'sig06.trace'], [t ; y]);
-val.name = [TRACE_PATH 'ev_sig06.breach.trace'];
+val.name = [TRACE_PATH 'evtl_sig06.breach.trace'];
 resultArray = [resultArray val];
 
 figure(4);
@@ -79,7 +81,7 @@ plot(t, y, '-xb',...
 axis([0 10 -1 1.5]);
 grid on;
 
-gpuacTrace = [TRACE_PATH 'ev_sig06.gpuac.trace'];
+gpuacTrace = [TRACE_PATH 'evtl_sig06.gpuac.trace'];
 if exist(gpuacTrace, 'file')
     gpu = readSignal(gpuacTrace);
     subplot(2,1,2);

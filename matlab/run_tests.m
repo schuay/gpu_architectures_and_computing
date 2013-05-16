@@ -1,11 +1,16 @@
 if ~ exist('init_test_cases', 'file')
     addpath('util')
 end
+
 init_test_cases
 
-
-fprintf('\nrunning AND tests...\n');
+alw_tests
 and_tests
+balw_tests
+bevtl_tests
+buntil_tests
+evtl_tests
+not_tests
+until_tests
 
-fprintf('\nrunning EVENTUALLY tests...\n');
-eventually_tests
+writeResultFiles

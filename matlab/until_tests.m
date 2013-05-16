@@ -5,12 +5,6 @@ if ~ exist('Sys', 'var')
     init_test_cases
 end
 
-
-%%
-%% first test AND operation
-%%
-fprintf(' AND test 1\n');
-
 sig1 = readSignal([TRACE_PATH 'sig01.trace']);
 sig2 = readSignal([TRACE_PATH 'sig02.trace']);
 
@@ -32,7 +26,7 @@ P.traj = traj;
 
 % define our formula
 % and
-QMITL_Formula('phi', '(s1[t] > 0) and (s2[t] > 0)');
+QMITL_Formula('phi', '(s1[t] > 0) until (s2[t] > 0)');
 
 QMITL_Eval(Sys, phi, P, traj);  % for some reason we have to call this first
 val2 = QMITL_Eval2raw(Sys, phi, traj);
@@ -40,7 +34,7 @@ val2 = QMITL_Eval2raw(Sys, phi, traj);
 % save the result
 %writeSignal([TRACE_PATH 'and_sig01_sig02.breach.trace'],...
 %    [val2.time; val2.X]);
-val2.name = [TRACE_PATH 'and_sig01_sig02.breach.trace'];
+val2.name = [TRACE_PATH 'until_sig01_sig02.breach.trace'];
 resultArray = [resultArray val2];
 
 % draw the signal traces
@@ -49,23 +43,9 @@ subplot(2,1,1);
 plot(sig1.time, sig1.X, '-sb',...
      sig2.time, sig2.X, '-sr',...
      val2.time, val2.X, '-sg');
-title('sig1 (blue), sig2 (red), (s1[t] > 0) and (s2[t] > 0) (green)');
+title('sig1 (blue), sig2 (red), (s1[t] > 0) until (s2[t] > 0) (green)');
 axis([0 3 -2 4]);
 grid on;
-
-gpuacTrace = [TRACE_PATH 'and_sig01_sig02.gpuac.trace'];
-if exist(gpuacTrace, 'file')
-    gpu_result = readSignal(gpuacTrace);
-    subplot(2,1,2);
-    plot(gpu_result.time, gpu_result.X, '-xg');
-    axis([0 3 -2 4]);
-    grid on;
-end
-
-%% 
-%% second AND test
-%%
-fprintf(' AND test 2\n');
 
 % create time sequence and two signals
 t = [0:0.4:3*pi];
@@ -80,8 +60,6 @@ traj.time = t;
 traj.X = [y1 ; y2];
 
 traj.param = Sys.p;
-P = CreateParamSet(Sys);
-P.pts = traj.param';
 P.traj = traj;
 
 % we just reuse our old formula
@@ -97,19 +75,10 @@ plot(t, y1, '-xb',...
 axis([0 10 -0.8 1.2]);
 grid on;
 
-gpuacTrace = [TRACE_PATH 'and_sig03_sig04.gpuac.trace'];
-if exist(gpuacTrace, 'file')
-    gpu_result = readSignal(gpuacTrace);
-    subplot(2,1,2);
-    plot(gpu_result.time, gpu_result.X, '-xg');
-    axis([0 10 -0.8 1.2]);
-    grid on;
-end
-
 % save our signals
 writeSignal([TRACE_PATH 'sig03.trace'], [t ; y1]);
 writeSignal([TRACE_PATH 'sig04.trace'], [t ; y2]);
 %writeSignal('and-test2-breach-result.txt', [val2.time ; val2.X]);
 
-val2.name = [TRACE_PATH 'and_sig03_sig04.breach.trace'];
+val2.name = [TRACE_PATH 'until_sig03_sig04.breach.trace'];
 resultArray = [resultArray val2];

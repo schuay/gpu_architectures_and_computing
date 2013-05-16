@@ -5,10 +5,6 @@ if ~ exist('Sys', 'var')
     init_test_cases
 end
 
-
-%%
-%% first test
-%%
 sig1 = readSignal([TRACE_PATH 'sig05.trace']);
 
 traj.time = sig1.time;
@@ -20,14 +16,14 @@ P.pts = traj.param';
 P.traj = traj;
 
 % define formula
-QMITL_Formula('phi_not', 'not (s1[t] > 0)');
+QMITL_Formula('phi_not', 'alw (s1[t] > 0)');
 
 QMITL_Eval(Sys, phi_not, P, traj);
 val = QMITL_Eval2raw(Sys, phi_not, traj);
 
 % save result
 %writeSignal('eventually-test-breach-result.txt', [val.time ; val.X]);
-val.name = [TRACE_PATH 'not_sig05.breach.trace'];
+val.name = [TRACE_PATH 'alw_sig05.breach.trace'];
 resultArray = [resultArray val];
 
 
@@ -48,5 +44,5 @@ val = QMITL_Eval2raw(Sys, phi_not, traj);
 
 % save signals
 writeSignal([TRACE_PATH 'sig06.trace'], [t ; y]);
-val.name = [TRACE_PATH 'not_sig06.breach.trace'];
+val.name = [TRACE_PATH 'alw_sig06.breach.trace'];
 resultArray = [resultArray val];
