@@ -17,6 +17,10 @@ sigcmp(const sigpt_t *lhs,
     int i = 0, j = 0;
     const sigpt_t *l, *r;
 
+    if (nlhs == 0 || nrhs == 0) {
+        return (nlhs != 0 || nrhs != 0);
+    }
+
     if (!FLOAT_EQUALS(lhs[0].t, rhs[0].t)) {
         fprintf(stderr, "Different signal start points. lhs: %f, rhs: %f\n",
                 lhs[0].t, rhs[0].t);
