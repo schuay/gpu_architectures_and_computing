@@ -17,7 +17,7 @@
 typedef struct {
     float t;        /**< The time value. */
     int i;          /**< The original index. */
-    int assoc_i;    /**< The associated index of the other signal. */
+    int ilhs, irhs; /**< The indices of the last elements in lhs, rhs with t' <= t. */
     int flags;
 } seqpt_t;
 
@@ -49,28 +49,21 @@ sigpt_extrapolate(const sigpt_t *lhs,
     for (int i = tid; i < n_ts; i += blockDim.x * gridDim.x) {
         const seqpt_t seqpt = ts[i];
 
-        const int is_lhs = (seqpt.flags & FLAG_LHS) != 0;
-        const int is_rhs = !is_lhs;
-
-        const int assoc_lhs = is_lhs * seqpt.i + is_rhs * seqpt.assoc_i;
-        const int assoc_rhs = is_rhs * seqpt.i + is_lhs * seqpt.assoc_i;
+        const int ilhs = seqpt.ilhs;
+        const int irhs = seqpt.irhs;
 
         /* TODO: Optimize. */
 
-        if (assoc_lhs >= n_lhs - 1) {
-            clhs[i] = (sigpt_t){ seqpt.t, lhs[assoc_lhs].y, lhs[assoc_lhs].dy };
+        if (ilhs >= n_lhs - 1) {
+            clhs[i] = (sigpt_t){ seqpt.t, lhs[ilhs].y, lhs[ilhs].dy };
         } else {
-            clhs[i] = interpolate(lhs + assoc_lhs,
-                                              lhs + assoc_lhs + 1,
-                                              seqpt.t);
+            clhs[i] = interpolate(lhs + ilhs, lhs + ilhs + 1, seqpt.t);
         }
 
-        if (assoc_rhs >= n_rhs - 1) {
-            crhs[i] = (sigpt_t){ seqpt.t, rhs[assoc_rhs].y, rhs[assoc_rhs].dy };
+        if (irhs >= n_rhs - 1) {
+            crhs[i] = (sigpt_t){ seqpt.t, rhs[irhs].y, rhs[irhs].dy };
         } else {
-            crhs[i] = interpolate(rhs + assoc_rhs,
-                                              rhs + assoc_rhs + 1,
-                                              seqpt.t);
+            crhs[i] = interpolate(rhs + irhs, rhs + irhs + 1, seqpt.t);
         }
     }
 }
@@ -99,10 +92,8 @@ merge_i(const int *lhs,
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        const int is_lhs = (out[i].flags & FLAG_LHS) != 0;
-        const int is_rhs = !is_lhs;
-
-        out[i].assoc_i = is_lhs * rhs[i] + is_rhs * lhs[i];
+        out[i].ilhs = lhs[i];
+        out[i].irhs = rhs[i];
     }
 }
 
@@ -115,7 +106,7 @@ sigpt_to_seqpt(const sigpt_t *in,
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        seqpt_t seqpt = { in[i].t, i, 0, flags };
+        seqpt_t seqpt = { in[i].t, i, 0, 0, flags };
         out[i] = seqpt;
     }
 }
@@ -147,12 +138,10 @@ calc_intersections(const sigpt_t *lhs,
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     /* At this point, we are only interested in intersection elements in ts.
-     * These are located at every index 2 * i + 1, i <- N.
+     * These are located at every index 2 * i + 1, i <- n_ts / 2.
      *
-     * Assuming ts.flags ~ FLAG_LHS: ts[i].i is the index of the current
-     * point in lhs (the next point is obviously lhs[ts[i].i + 1]).
-     * The closest point to the left in in rhs is located at index
-     * rhs_max[i], and the closest to the right is rhs_max[i] + 1.
+     * ts[i].ilhs is the index of the last point in lhs with t <= ts[i].t,
+     * and ts[i].irhs is the corresponding point in rhs.
      *
      * This is enough information to determine the time of the signal
      * intersection.
@@ -160,14 +149,7 @@ calc_intersections(const sigpt_t *lhs,
 
     for (int i = tid; 2 * i + 1 < n_ts; i += blockDim.x * gridDim.x) {
         const int ii = 2 * i + 1;
-        seqpt_t s = ts[ii];
-
-        const int is_lhs = (s.flags & FLAG_LHS) != 0;
-        const int is_rhs = !is_lhs;
-
-        /* TODO: Optimize. */
-        const sigpt_t *this_sig = is_lhs ? lhs : rhs;
-        const sigpt_t *other_sig = is_lhs ? rhs : lhs;
+        const seqpt_t s = ts[ii];
 
         /* We now have four points corresponding to the end points of the
          * two line segments. (x1, y1) and (x2, y2) for one line segment,
@@ -179,15 +161,14 @@ calc_intersections(const sigpt_t *lhs,
          * care about intersections in a specific interval.
          */
 
-        if ((is_lhs && (s.i > n_lhs - 2 || s.assoc_i > n_rhs - 2)) ||
-            (is_rhs && (s.i > n_rhs - 2 || s.assoc_i > n_lhs - 2))) {
+        if (s.ilhs > n_lhs - 2 || s.irhs > n_rhs - 2) {
             continue; /* TODO: Optimize */
         }
 
-        const sigpt_t p1 = this_sig[s.i];
-        const sigpt_t p2 = this_sig[s.i + 1];
-        const sigpt_t p3 = other_sig[s.assoc_i];
-        const sigpt_t p4 = other_sig[s.assoc_i + 1];
+        const sigpt_t p1 = lhs[s.ilhs];
+        const sigpt_t p2 = lhs[s.ilhs + 1];
+        const sigpt_t p3 = rhs[s.irhs];
+        const sigpt_t p4 = rhs[s.irhs + 1];
 
         const float denom = (p1.t - p2.t) * (p3.y - p4.y) -
                             (p1.y - p2.y) * (p3.t - p4.t);
@@ -259,7 +240,7 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
      *
      * We do this by first extracting the indices of each side to an array,
      * running a max() scan over it, and finally merging these arrays back into
-     * seqpt_t.assoc_i.
+     * seqpt_t.ilhs and seqpt_t.irhs.
      */
 
     thrust::device_ptr<int> lhs_i_max = thrust::device_malloc<int>(n_ts);
