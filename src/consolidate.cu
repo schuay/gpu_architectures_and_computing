@@ -236,11 +236,9 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
      *
      * Using interpolation, construct lhs' and rhs' such that they contain all
      * t <- ts.
-     *
-     * Finally, do a simple min() over these arrays.
      */
 
-    /* First, extract the time sequences, merge them. */
+    /* First, extract the time sequences and merge them. */
 
     thrust::device_ptr<seqpt_t> lhs_ts = thrust::device_malloc<seqpt_t>(nlhs);
     sigpt_to_seqpt<<<NBLOCKS, NTHREADS>>>(lhs.get(), lhs_ts.get(), nlhs, FLAG_LHS);
@@ -250,14 +248,15 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
 
     int n_ts = nrhs + nlhs;
     thrust::device_ptr<seqpt_t> ts = thrust::device_malloc<seqpt_t>(n_ts);
-    thrust::merge(lhs_ts, lhs_ts + nrhs, rhs_ts, rhs_ts + nrhs,
-                  ts, seqpt_less());
+    thrust::merge(lhs_ts, lhs_ts + nrhs, rhs_ts, rhs_ts + nrhs, ts, seqpt_less());
 
     thrust::device_free(lhs_ts);
     thrust::device_free(rhs_ts);
 
-    /* Now, for every proto-intersection of side s <- { lhs, rhs }, we need to
-     * find the index of the element to its immediate left of the opposing side.
+    /* Associate every sequence point t <- ts with the latest element of the other signal
+     * that satisfies t' <= t. For example, if the current t has FLAG_LHS and t = 3.5,
+     * we associate it with the latest point p <- rhs such that p.t <= 3.5.
+     *
      * We do this by first extracting the indices of each side to an array,
      * running a max() scan over it, and finally merging these arrays back into
      * seqpt_t.assoc_i.
@@ -292,7 +291,6 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
         thrust::unique(rts, rts + n_ts, seqpt_same_time());
     const int n_rts = rts_end - rts;
 
-
     /* Add a proto-intersection after each point in the resulting sequence. */
 
     int n_tsi = n_rts * 2;
@@ -302,9 +300,7 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_free(ts);
 
     /* Next, we go through and fill in ISC elements; if there's an intersection
-     * we set the time accordingly, and if there isn't, we mark it as DEL.
-     * An intersection must always be between the latest (lhs, rhs) and the next such
-     * pair.
+     * we set the time accordingly.
      */
 
     calc_intersections<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), tsi.get(),
@@ -318,9 +314,9 @@ consolidate(const thrust::device_ptr<sigpt_t> &lhs,
         thrust::unique(tsi, tsi + n_tsi, seqpt_same_time());
     n_tsi = tsi_end - tsi;
 
-    /* We now have the complete time sequence stored in ts, including
+    /* We now have the complete time sequence stored in tsi, including
      * all points in lhs, rhs, and intersections of the two (what a bitch).
-     * Extrapolate the sigpt_t sequence of both signals for each point <- ts.
+     * Extrapolate the sigpt_t sequence of both signals for each point <- tsi.
      */
 
     thrust::device_ptr<sigpt_t> lhs_extrapolated = thrust::device_malloc<sigpt_t>(n_tsi);
