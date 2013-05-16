@@ -1,8 +1,11 @@
 #include "sigpt.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
-sigpt_t *sigpt_random(int seed, int n)
+sigpt_t *
+sigpt_random(const int seed,
+             const int n)
 {
     sigpt_t *buffer = (sigpt_t *)malloc(sizeof(sigpt_t) * n);
     if (buffer == NULL) {
@@ -21,4 +24,16 @@ sigpt_t *sigpt_random(int seed, int n)
     }
 
     return buffer;
+}
+
+void
+sigpt_print(const char *name,
+            const sigpt_t *in,
+            const int n)
+{
+    printf("%s (%d)\n", name, n);
+    for (int i = 0; i < n; i++) {
+        sigpt_t sigpt = in[i];
+        printf("%i: {t: %f, y: %f, dy: %f}\n", i, sigpt.t, sigpt.y, sigpt.dy);
+    }
 }
