@@ -3,6 +3,17 @@ Group 2, 2013S
 Vienna University of Technology
 ===============================
 
+Breach Setup
+------------
+
+1. Install Matlab
+2. Get Breach (see below)
+3. Copy matlab/QMITL_Eval2raw.m to breach/@QMITL_Formula
+4. Open Matlab and add both breach and matlab/ (and all its subdirectories) to path
+5. Run InstallBreach
+6. Run InitBreach
+7. Make sure the current directory is set to matlab/; Run any of our matlab scripts.
+
 Resources
 ---------
 
