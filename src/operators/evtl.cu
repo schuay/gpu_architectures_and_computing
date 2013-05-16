@@ -15,27 +15,35 @@ struct sigpt_max : public thrust::binary_function<sigpt_t, sigpt_t, sigpt_t>
     }
 };
 
-__global__ void
-eventually_intersect(const sigpt_t *ys, sigpt_t *zs, sigpt_t *zs_intersect, char *cs, int n)
+__global__ static void
+evtl_intersect(const sigpt_t *ys,
+               sigpt_t *zs,
+               sigpt_t *zs_intersect,
+               char *cs,
+               const int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         cs[i * 2] = 1;
-    zs_intersect[i * 2] = zs[i];
+        zs_intersect[i * 2] = zs[i];
         // FIXME: Branches are bad.
         if (i < n - 1 && zs[i].y > zs[i + 1].y) {
             cs[i * 2 + 1] = 1;
             zs_intersect[i * 2 + 1].t = zs[i + 1].t +
-            (zs[i + 1].t - zs[i].t) *
-            (zs[i + 1].y - ys[i + 1].y) / (ys[i + 1].y - ys[i].y);
+                (zs[i + 1].t - zs[i].t) *
+                (zs[i + 1].y - ys[i + 1].y) / (ys[i + 1].y - ys[i].y);
             zs_intersect[i * 2 + 1].y = zs[i + 1].y;
         }
     }
 }
 
-__global__ void
-eventually_compact(const sigpt_t *zs, sigpt_t *zs_final, const char *cs, const size_t *fs, int n)
+__global__ static void
+evtl_compact(const sigpt_t *zs,
+             sigpt_t *zs_final,
+             const char *cs,
+             const size_t *fs,
+             const int n)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -70,13 +78,13 @@ stl_evtl(const thrust::device_ptr<sigpt_t> &in,
 
     thrust::device_vector<char> used(dnout, 0);
     char *cs = thrust::raw_pointer_cast(used.data());
-    eventually_intersect<<<NBLOCKS, NTHREADS>>>(ys, zs_final, zs, cs, nin);
+    evtl_intersect<<<NBLOCKS, NTHREADS>>>(ys, zs_final, zs, cs, nin);
 
     thrust::device_vector<size_t> positions(dnout, 0);
     thrust::exclusive_scan(used.cbegin(), used.cend(), positions.begin(), 0, thrust::plus<size_t>()); 
 
     size_t *fs = thrust::raw_pointer_cast(positions.data());
-    eventually_compact<<<NBLOCKS, NTHREADS>>>(zs, zs_final, cs, fs, dnout);
+    evtl_compact<<<NBLOCKS, NTHREADS>>>(zs, zs_final, cs, fs, dnout);
 
     *out = dout;
     *nout = positions.back(); /* Note that we don't actually resize here. */
