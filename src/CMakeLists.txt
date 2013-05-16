@@ -8,6 +8,8 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+cuda_add_library(consolidate consolidate.cu)
+
 cuda_add_executable(gpuac
     ${SOURCES}
 )
