@@ -1,3 +1,5 @@
+load_env
+
 if ~ exist('init_test_cases', 'file')
     addpath('util')
 end
@@ -14,3 +16,5 @@ not_tests
 until_tests
 
 writeResultFiles
+
+quit
