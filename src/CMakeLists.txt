@@ -20,6 +20,12 @@ target_link_libraries(gpuac
     stl_or
 )
 
+set(BUILD_SHARED_LIBS ON)
+cuda_add_library(stlcuda
+    stlcuda.cu
+    sigpt.c
+)
+
 add_subdirectory(operators)
 add_subdirectory(parser)
 
