@@ -18,12 +18,15 @@ target_link_libraries(gpuac
     stl_evtl
     stl_not
     stl_or
+    stl_alw
+    stl_until
 )
 
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 cuda_add_library(stlcuda
     stlcuda.cu
     sigpt.c
+    SHARED
 )
 
 add_subdirectory(operators)

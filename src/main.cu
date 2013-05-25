@@ -15,6 +15,8 @@ extern "C" {
 #include "operators/evtl.hpp"
 #include "operators/or.hpp"
 #include "operators/not.hpp"
+#include "operators/alw.hpp"
+#include "operators/until.hpp"
 #include "globals.h"
 
 #define NITEMS (256 * 257)
@@ -181,7 +183,7 @@ usage(char* prog_name)
     printf("\n");
     printf("   <formular>   defines the stl formular, currently only the operator names\n");
     printf("                can be given: valid operator names:\n");
-    printf("                  AND, OR, NOT, UNTIL, ALW, EVT\n");
+    printf("                  AND, OR, NOT, UNTIL, ALW, EVTL\n");
     printf("   <signal1>    input signal 1\n");
     printf("   <signal2>    input signal 2\n");
     printf("\n");
@@ -189,6 +191,20 @@ usage(char* prog_name)
     printf("   -h           show help (this page)\n");
     printf("\n");
 }
+
+void
+print_elapsed_time(const char *formular, 
+                   const char *sig1_file, 
+                   const char *sig2_file,
+                   float time) {
+    printf("finished test %s for %s", formular, sig1_file);
+    if (sig2_file)
+        printf(", %s", sig2_file);
+
+    printf(", elapsed time: %.6f s\n", time / 1000);
+}
+
+
 
 int
 main(int argc, char **argv)
@@ -254,6 +270,8 @@ main(int argc, char **argv)
         }
     }
 
+    float time;
+
     
     if (strncmp(formular, "AND", 3) == 0) {
         if (!sig2_filename) {
@@ -261,7 +279,8 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        binary_operator_test(stl_and, sig1, sig1_n, sig2, sig2_n, result_filename);
+        time = binary_operator_test(stl_and, sig1, sig1_n, sig2, sig2_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
 
     } else if (strncmp(formular, "OR", 2) == 0) {
         if (!sig2_filename) {
@@ -269,10 +288,13 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
+        time = binary_operator_test(stl_or, sig1, sig1_n, sig2, sig2_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
     
     } else if (strncmp(formular, "NOT", 3) == 0) {
 
-        unary_operator_test(stl_not, sig1, sig1_n, result_filename);
+        time = unary_operator_test(stl_not, sig1, sig1_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
     
     } else if (strncmp(formular, "UNTIL", 5) == 0) {
         if (!sig2_filename) {
@@ -280,11 +302,18 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-    
+        time = binary_operator_test(stl_until, sig1, sig1_n, sig2, sig2_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+
     } else if (strncmp(formular, "ALW", 3) == 0) {
     
-    } else if (strncmp(formular, "EVT", 3) == 0) {
+        time = unary_operator_test(stl_alw, sig1, sig1_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+
+    } else if (strncmp(formular, "EVTL", 4) == 0) {
     
+        time = unary_operator_test(stl_evtl, sig1, sig1_n, result_filename);
+        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
     }
 
 
