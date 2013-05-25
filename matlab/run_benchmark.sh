@@ -145,13 +145,16 @@ for tc in $TEST_CASES ; do
     operator=${tc%%:*}
     tcname=${tc#*:}
 
+    echo "Testcase $tcname:"
+
     test_filename="$TRACES_PATH/$tcname"
 
     matlab_cmd="loadenv;"
     matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$test_filename', '$test_filename');"
     matlab_cmd="$matlab_cmd exit(r)"
     
-    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd"
+    echo -n "  "
+    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd" | tail -n +12
     result=$?
 
     if [ $result -ne 0 ] ; then
@@ -159,6 +162,8 @@ for tc in $TEST_CASES ; do
         break
     fi
 
+
+    echo -n "  "
     $GPUAC_BIN -o "${test_filename}.gpuac.trace" $operator ${test_filename}_sig*.trace
     result=$?
 
@@ -166,6 +171,8 @@ for tc in $TEST_CASES ; do
         echo "error: gpuac execution was not successfull" >&2
         break
     fi
+
+    echo 
 
 done
 

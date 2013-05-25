@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>   /* getopt */
+#include <libgen.h>   /* basename */
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
@@ -33,8 +34,10 @@ typedef void (*binary_operator_t) (const thrust::device_ptr<sigpt_t> &, const in
 typedef void (*unary_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
                                   thrust::device_ptr<sigpt_t>*, int*);
 
+static char *prog_name = NULL;
+
 static void
-usage(char* prog_name)
+usage()
 {
     printf("Usage: %s [-o resultfile] <formular> <signal1> [<signal2>]\n", prog_name);
     printf("   calculate robustness on the given formular and signal traces\n");
@@ -140,11 +143,8 @@ print_elapsed_time(const char *formular,
                    const char *sig2_file,
                    float time) 
 {
-    printf("finished test %s for %s", formular, sig1_file);
-    if (sig2_file)
-        printf(", %s", sig2_file);
-
-    printf(", elapsed time: %.6f s\n", time / 1000);
+    printf("%s: finished test %s ", prog_name, formular);
+    printf(" elapsed time: %.6f s\n", time / 1000); // print in sec to be inline with matlab
 }
 
 
@@ -174,6 +174,8 @@ main(int argc, char **argv)
     char *cmp_filename = NULL;
     char *formular;
 
+    prog_name = basename(argv[0]);
+
     thrust::host_vector<sigpt_t> sig1;
     thrust::host_vector<sigpt_t> sig2;
     thrust::host_vector<sigpt_t> result;
@@ -182,7 +184,7 @@ main(int argc, char **argv)
     while((opt = getopt(argc, argv, "ho:c:")) != -1) {
         switch(opt) {
         case 'h':
-            usage(argv[0]);
+            usage();
             exit(EXIT_SUCCESS);
             break;
 
@@ -196,14 +198,14 @@ main(int argc, char **argv)
 
         default:
             fprintf(stderr, "Invalid option -%c", opt);
-            usage(argv[0]);
+            usage();
             exit(EXIT_FAILURE);
        }
     }
 
     if ( (optind + 1) >= argc ) {
         fprintf(stderr, "Expected formular and input signal filename\n");
-        usage(argv[0]);
+        usage();
         exit(EXIT_FAILURE);
     }
 
@@ -307,3 +309,4 @@ main(int argc, char **argv)
 
     exit(EXIT_SUCCESS);
 }
+

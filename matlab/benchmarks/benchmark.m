@@ -21,34 +21,24 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
     
     switch test
         case 'AND-1000'
-            sig1 = createSig1(5, 25, 1000);
-            
-            traj.time = sig1.t;
-            traj.X = [ sig1.y1 ; sig1.y2 ];
-            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
-
-            fprintf('testcase %s, finished. time: %g s\n',...
-                    test, result.time);
+            [result, traj] = and_or_test(Sys, createSig1(5, 25, 1000), 'and');
+            printResult(test, result);
 
         case 'AND-10000'
-            sig1 = createSig1(10, 50, 10000);
+            [result, traj] = and_or_test(Sys, createSig1(10, 50, 10000), 'and');
+            printResult(test, result);
             
-            traj.time = sig1.t;
-            traj.X = [ sig1.y1 ; sig1.y2 ];
-            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
+%            traj.time = sig1.t;
+%            traj.X = [ sig1.y1 ; sig1.y2 ];
+%            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
 
-            fprintf('testcase %s, finished. time: %g s\n',...
-                    test, result.time);
+%            printResult(test, result);
+%            fprintf('Breach: testcase %s, finished. time: %g s\n',...
+%                    test, result.time);
 
         case 'AND-100000'
-            sig1 = createSig1(10, 50, 100000);
-            
-            traj.time = sig1.t;
-            traj.X = [ sig1.y1 ; sig1.y2 ];
-            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
-
-            fprintf('testcase %s, finished. time: %g s\n',...
-                    test, result.time);
+            [result, traj] = and_or_test(Sys, createSig1(10, 50, 100000), 'and');
+            printResult(test, result);
 
         otherwise
             returncode = 1;
@@ -69,4 +59,47 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
         filename = sprintf('%s.breach.trace', resultFileName);
         writeSignal( filename, [ result.val.time ; result.val.X ] );
     end
+end
+
+function [ result ] = runTestCase( Sys, formular, traj )
+%RUNTESTCASE run one testcase on the defined input parameter
+%   run testcase with the given formular and the defined traj array
+%
+%   Sys       Breach System
+%   formular  Breach STL formular for this testcase
+%   traj      signal traces 
+%             traj.X    ... signals
+%             traj.time ... time domain
+%
+
+    QMITL_Formula('stl_formular', formular);
+            
+    traj.param = Sys.p;
+            
+    P = CreateParamSet(Sys);
+    P.pts = traj.param';
+    P.traj = traj;
+            
+    QMITL_Eval(Sys, stl_formular, P, traj); % for some reason we have to call this first
+    
+    tic;
+    result.val = QMITL_Eval2raw(Sys, stl_formular, traj);
+    result.time = toc;
+    
+end
+
+
+
+function [ ] = printResult(test, result)
+    fprintf('Breach: testcase %s, finished. time: %g s\n',...
+            test, result.time);
+    
+end
+
+    
+function [result, t] = and_or_test(Sys, sig1, op)
+    traj.time = sig1.t;
+    traj.X = [ sig1.y1 ; sig1.y2 ];
+    result = runTestCase(Sys, ['(s1[t] > 0) ' op ' (s2[t] > 0)'], traj);
+    t = traj;
 end
