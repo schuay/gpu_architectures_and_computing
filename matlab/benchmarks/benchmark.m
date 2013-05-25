@@ -53,6 +53,7 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
         otherwise
             returncode = 1;
             fprintf(2, 'test case "%s" not defined\n', test);
+            return
     end
     
     if nargin > 1
