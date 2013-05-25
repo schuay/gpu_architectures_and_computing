@@ -17,6 +17,9 @@ function usage {
     echo "                can also be defined via BREACH_PATH env. variable"
     echo "   -g file      gpuac executable (default: $GPUAC_BIN)"
     echo "                can alos be defined via GPUAC_BIN environmen variable"
+    echo "   -c           compare both result files"
+    echo "   -n           do not write files, instead use the existing ones"
+    echo "   -r           remove files after test case execution"
     echo "   -h           show help (this page)"
     echo ""
 }
@@ -25,7 +28,10 @@ function usage {
 
 DO_ALL=false
 TEST_CASES=""
-while getopts "hat:m:b:g:" opt ; do
+DO_COMPARE=false
+DO_NOT_WRITE=false
+DO_REMOVE=false
+while getopts "hat:m:b:g:cnr" opt ; do
     case $opt in 
         a)  
             DO_ALL=true
@@ -45,6 +51,18 @@ while getopts "hat:m:b:g:" opt ; do
 
         g)
             GPUAC_BIN=$OPTARG
+            ;;
+
+        c)
+            DO_COMPARE=true
+            ;;
+
+        n)
+            DO_NOT_WRITE=true
+            ;;
+
+        r)
+            DO_REMOVE=true
             ;;
 
         h)
@@ -132,7 +150,7 @@ elif $DO_ALL ; then
     TEST_CASES=$(cat $TESTCASES_FILE)
 
 else
-    echo "no test cases defined"
+    echo "no test cases defined or found"
 fi
 
 #echo $TEST_CASES
@@ -150,7 +168,11 @@ for tc in $TEST_CASES ; do
     test_filename="$TRACES_PATH/$tcname"
 
     matlab_cmd="loadenv;"
-    matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$test_filename', '$test_filename');"
+    if $DO_NOT_WRITE ; then
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
+    else
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$test_filename', '$test_filename');"
+    fi
     matlab_cmd="$matlab_cmd exit(r)"
     
     echo -n "  "
@@ -162,14 +184,27 @@ for tc in $TEST_CASES ; do
         break
     fi
 
+    gpuac_arg=""
+    if ! $DO_NOT_WRITE ; then
+        gpuac_arg="$gpuac_arg -o ${test_filename}.gpuac.trace"
+    fi
+    if $DO_COMPARE ; then
+        gpuac_arg="$gpuac_arg -c ${test_filename}.breach.trace"
+    fi
 
     echo -n "  "
-    $GPUAC_BIN -o "${test_filename}.gpuac.trace" $operator ${test_filename}_sig*.trace
+    $GPUAC_BIN $gpuac_arg $operator ${test_filename}_sig*.trace
     result=$?
 
     if [ $result -ne 0 ] ; then
         echo "error: gpuac execution was not successfull" >&2
         break
+    fi
+
+    if $DO_REMOVE ; then
+        rm -f ${test_filename}_sig*.trace 
+        rm -f ${test_name}.breach.trace 
+        rm -f ${test_name}.gpuac.trace
     fi
 
     echo 
