@@ -1,4 +1,4 @@
-function [ ] = benchmark ( test )
+function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
 % BENCHMARK runs the given benchmark and measures the time for it
 %   run the specified benchmark and measure the time breach
 %   needs for it
@@ -13,29 +13,59 @@ function [ ] = benchmark ( test )
     Sys = CreateExternSystem('myTest', vars, params, p0);
 
     % define path to trace files
-    TRACE_PATH = 'traces/';
-  
+    %TRACE_PATH = 'traces/';
+    % define default return code
+    % returncodes: 0 ... ok
+    %              1 ... test case not defined
+    returncode = 0;
     
     switch test
-        case 'simpleAND'
-            QMITL_Formula('s1_and_s2', '(s1[t] > 0) and (s2[t] > 0)');
+        case 'AND-1000'
             sig1 = createSig1(5, 25, 1000);
             
             traj.time = sig1.t;
             traj.X = [ sig1.y1 ; sig1.y2 ];
-            traj.param = Sys.p;
-            
-            P = CreateParamSet(Sys);
-            P.pts = traj.param';
-            P.traj = traj;
-            
-            QMITL_Eval(Sys, s1_and_s2, P, traj); % for some reason we have to call this first
-            tic;
-            val = QMITL_Eval2raw(Sys, s1_and_s2, traj);
+            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
+
             fprintf('testcase %s, finished. time: %g s\n',...
-                test, toc);
-    
+                    test, result.time);
+
+        case 'AND-10000'
+            sig1 = createSig1(10, 50, 10000);
+            
+            traj.time = sig1.t;
+            traj.X = [ sig1.y1 ; sig1.y2 ];
+            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
+
+            fprintf('testcase %s, finished. time: %g s\n',...
+                    test, result.time);
+
+        case 'AND-100000'
+            sig1 = createSig1(10, 50, 100000);
+            
+            traj.time = sig1.t;
+            traj.X = [ sig1.y1 ; sig1.y2 ];
+            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
+
+            fprintf('testcase %s, finished. time: %g s\n',...
+                    test, result.time);
+
         otherwise
+            returncode = 1;
             fprintf(2, 'test case "%s" not defined\n', test);
+    end
+    
+    if nargin > 1
+        [rows cols] = size(traj.X);
+        
+        for i = 1:rows
+            filename = sprintf('%s_sig%d.trace', signalFileNameBase, i);
+            writeSignal( filename, [ traj.time ; traj.X(i,:) ] );
+        end
+    end
+    
+    if nargin > 2
+        filename = sprintf('%s.breach.trace', resultFileName);
+        writeSignal( filename, [ result.val.time ; result.val.X ] );
     end
 end
