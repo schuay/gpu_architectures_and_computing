@@ -19,6 +19,8 @@ extern "C" {
 #include "operators/until.hpp"
 #include "globals.h"
 
+#include "sigcmp.hpp"
+
 #define NITEMS (256 * 257)
 #define TESTFILES_PATH "matlab/traces/"
 
@@ -49,67 +51,15 @@ _checkCudaError(cudaError_t result,
     }
 }
 
-static void
-or_test(const char* sig1_filename,
-        const char* sig2_filename,
-        const char* result_filename)
-{
-    sigpt_t *a;
-    sigpt_t *b;
-
-    int a_n = read_signal_file(sig1_filename, &a);
-    int b_n = read_signal_file(sig2_filename, &b);
-
-    if (a_n == 0 || b_n == 0) {
-        fprintf(stderr, "couldn't open one of the test files\n");
-        return;
-    }
-
-    thrust::device_vector<sigpt_t> sig1(a, a + a_n);
-    thrust::device_vector<sigpt_t> sig2(b, b + b_n);
-
-    thrust::device_ptr<sigpt_t> d_result;
-    int nout;
-
-    cudaEvent_t start, stop;
-    float elapsedTime;
-
-
-    checkCudaError(cudaEventCreate(&start));
-    checkCudaError(cudaEventCreate(&stop));
-    checkCudaError(cudaEventRecord(start, 0));
-
-    stl_or(&sig1[0], sig1.size(), &sig2[0], sig2.size(), &d_result, &nout);
-
-    checkCudaError(cudaEventRecord(stop, 0));
-    checkCudaError(cudaEventSynchronize(stop));
-    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
-    checkCudaError(cudaEventDestroy(start));
-    checkCudaError(cudaEventDestroy(stop));
-
-    printf("\tElapsed time: %f ms\n", elapsedTime);
-
-    thrust::host_vector<sigpt_t> result(d_result, d_result + nout);
-
-    write_signal_file(result_filename,
-            result.data(), result.size());
-
-    thrust::device_free(d_result);
-
-    free(a);
-    free(b);
-}
 
 static float
 binary_operator_test(binary_operator_t op_function,
-                     const sigpt_t* a, const int a_n,
-                     const sigpt_t* b, const int b_n,
-                     const char *result_filename)
+                     const thrust::host_vector<sigpt_t> &a,
+                     const thrust::host_vector<sigpt_t> &b,
+                     thrust::host_vector<sigpt_t> &result)
 {
-
-    thrust::device_vector<sigpt_t> sig1(a, a + a_n);
-    thrust::device_vector<sigpt_t> sig2(b, b + b_n);
-
+    thrust::device_vector<sigpt_t> sig1(a);
+    thrust::device_vector<sigpt_t> sig2(b);
     thrust::device_ptr<sigpt_t> d_result;
     int nout;
 
@@ -128,12 +78,7 @@ binary_operator_test(binary_operator_t op_function,
     checkCudaError(cudaEventDestroy(start));
     checkCudaError(cudaEventDestroy(stop));
 
-    if (result_filename) {
-        thrust::host_vector<sigpt_t> result_h(d_result, d_result + nout);
-        write_signal_file(result_filename,
-                result_h.data(), result_h.size());
-    }
-
+    result.assign(d_result, d_result + nout);
     thrust::device_free(d_result);
 
     return elapsedTime;
@@ -141,11 +86,11 @@ binary_operator_test(binary_operator_t op_function,
 
 static float
 unary_operator_test(unary_operator_t op_function,
-                    const sigpt_t *a, const int a_n,
-                    const char *result_filename)
+                    const thrust::host_vector<sigpt_t> &a,
+                    thrust::host_vector<sigpt_t> &result)
 {
 
-    thrust::device_vector<sigpt_t> in(a, a + a_n);
+    thrust::device_vector<sigpt_t> in(a);
     thrust::device_ptr<sigpt_t> out;
     int nout;
 
@@ -164,18 +109,14 @@ unary_operator_test(unary_operator_t op_function,
     checkCudaError(cudaEventDestroy(start));
     checkCudaError(cudaEventDestroy(stop));
 
-    if (result_filename) {
-        thrust::host_vector<sigpt_t> result_h(out, out + nout);
-        write_signal_file(result_filename, 
-                result_h.data(), result_h.size());
-    }
 
+    result.assign(out, out + nout);
     thrust::device_free(out);
 
     return elapsedTime;
 }
 
-void
+static void
 usage(char* prog_name)
 {
     printf("Usage: %s [-o resultfile] <formular> <signal1> [<signal2>]\n", prog_name);
@@ -188,21 +129,39 @@ usage(char* prog_name)
     printf("   <signal2>    input signal 2\n");
     printf("\n");
     printf("   -o file      filename for storing the resulting signal\n");
+    printf("   -c file      compare calculated sig with sig from file\n");
     printf("   -h           show help (this page)\n");
     printf("\n");
 }
 
-void
+static void
 print_elapsed_time(const char *formular, 
                    const char *sig1_file, 
                    const char *sig2_file,
-                   float time) {
+                   float time) 
+{
     printf("finished test %s for %s", formular, sig1_file);
     if (sig2_file)
         printf(", %s", sig2_file);
 
     printf(", elapsed time: %.6f s\n", time / 1000);
 }
+
+static bool
+read_signal(const char *filename, 
+            thrust::host_vector<sigpt_t> &v) 
+{
+    sigpt_t *sig;
+    int n = read_signal_file(filename, &sig);
+    if (n <= 0) {
+        return false;
+    }
+    v.assign(sig, sig + n);
+    free(sig);
+
+    return true;
+}
+
 
 
 
@@ -213,15 +172,16 @@ main(int argc, char **argv)
     char *result_filename = NULL;
     char *sig1_filename = NULL;
     char *sig2_filename = NULL;
+    char *cmp_filename = NULL;
     char *formular;
 
-    sigpt_t *sig1;
-    sigpt_t *sig2;
-    sigpt_t *result;
-    int sig1_n, sig2_n, result_n;
+    thrust::host_vector<sigpt_t> sig1;
+    thrust::host_vector<sigpt_t> sig2;
+    thrust::host_vector<sigpt_t> result;
+    thrust::host_vector<sigpt_t> cmp;
 
 
-    while((opt = getopt(argc, argv, "ho:")) != -1) {
+    while((opt = getopt(argc, argv, "ho:c:")) != -1) {
         switch(opt) {
         case 'h':
             usage(argv[0]);
@@ -230,6 +190,10 @@ main(int argc, char **argv)
 
         case 'o':
             result_filename = optarg;
+            break;
+
+        case 'c':
+            cmp_filename = optarg;
             break;
 
         default:
@@ -255,31 +219,36 @@ main(int argc, char **argv)
     if (result_filename)
         printf("result: %s\n", result_filename);
 */
-    sig1_n = read_signal_file(sig1_filename, &sig1);
-    if (sig1_n <= 0) {
+
+    /*
+     * read signal files
+     */
+    if (!read_signal(sig1_filename, sig1)) {
         fprintf(stderr, "could not open signal file '%s' or to less memory available.\n", 
                 sig1_filename);
         exit(EXIT_FAILURE);
     }
     if (sig2_filename) {
-        sig2_n = read_signal_file(sig2_filename, &sig2);
-        if (sig2_n <= 0) {
+        if (!read_signal(sig2_filename, sig2)) {
             fprintf(stderr, "could not open signal file '%s' or to less memory available.\n", 
                     sig2_filename);
             exit(EXIT_FAILURE);
         }
     }
 
-    float time;
 
-    
+
+    float time;
+    /*
+     * check for operator and execute it
+     */
     if (strncmp(formular, "AND", 3) == 0) {
         if (!sig2_filename) {
             fprintf(stderr, "AND operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
-        time = binary_operator_test(stl_and, sig1, sig1_n, sig2, sig2_n, result_filename);
+        time = binary_operator_test(stl_and, sig1, sig2, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
 
     } else if (strncmp(formular, "OR", 2) == 0) {
@@ -288,12 +257,12 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        time = binary_operator_test(stl_or, sig1, sig1_n, sig2, sig2_n, result_filename);
+        time = binary_operator_test(stl_or, sig1, sig2, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
     
     } else if (strncmp(formular, "NOT", 3) == 0) {
 
-        time = unary_operator_test(stl_not, sig1, sig1_n, result_filename);
+        time = unary_operator_test(stl_not, sig1, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
     
     } else if (strncmp(formular, "UNTIL", 5) == 0) {
@@ -302,21 +271,39 @@ main(int argc, char **argv)
             exit(EXIT_FAILURE);
         }
 
-        time = binary_operator_test(stl_until, sig1, sig1_n, sig2, sig2_n, result_filename);
+        time = binary_operator_test(stl_until, sig1, sig2, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
 
     } else if (strncmp(formular, "ALW", 3) == 0) {
     
-        time = unary_operator_test(stl_alw, sig1, sig1_n, result_filename);
+        time = unary_operator_test(stl_alw, sig1, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
 
     } else if (strncmp(formular, "EVTL", 4) == 0) {
     
-        time = unary_operator_test(stl_evtl, sig1, sig1_n, result_filename);
+        time = unary_operator_test(stl_evtl, sig1, result);
         print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+
+    } else {
+        fprintf(stderr, "unknown operator '%s'\n", formular);
+        exit(EXIT_FAILURE);
     }
 
+    if (result_filename) {
+        write_signal_file(result_filename, result.data(), result.size());
+    }
 
+    if (cmp_filename) {
+        if (!read_signal(cmp_filename, cmp)) {
+            fprintf(stderr, "could not read signal from file %s or not enough memory available\n",
+                    cmp_filename);
+            exit(EXIT_FAILURE);
+        }
+        if (sigcmp(result.data(), result.size(), cmp.data(), cmp.size()) != 0) {
+            fprintf(stderr, "calculated signal dosn't match with given compare signal\n");
+            exit(EXIT_FAILURE);
+        }
+    }
 
     exit(EXIT_SUCCESS);
 }

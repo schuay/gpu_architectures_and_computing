@@ -2,6 +2,7 @@ set(SOURCES
     sigpt.c
     util.c
     main.cu
+    sigcmp.cu
 )
 
 include_directories(
