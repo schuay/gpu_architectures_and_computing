@@ -2,6 +2,7 @@
 *~
 build/
 matlab/traces/benchmark/*
+matlab/benchmarks/traces/*
 
 # ignore eclipse project files
 .*project
