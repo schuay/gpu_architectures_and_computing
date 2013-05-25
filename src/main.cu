@@ -3,8 +3,9 @@
 #include <string.h>
 #include <unistd.h>   /* getopt */
 
-#include <cuda_runtime.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_ptr.h>
 
 extern "C" {
 #include "sigpt.h"
@@ -21,8 +22,6 @@ extern "C" {
 
 #include "sigcmp.hpp"
 
-#define NITEMS (256 * 257)
-#define TESTFILES_PATH "matlab/traces/"
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
 
@@ -34,7 +33,24 @@ typedef void (*binary_operator_t) (const thrust::device_ptr<sigpt_t> &, const in
 typedef void (*unary_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
                                   thrust::device_ptr<sigpt_t>*, int*);
 
-/* TODO: Handle multiple GPUs. */
+static void
+usage(char* prog_name)
+{
+    printf("Usage: %s [-o resultfile] <formular> <signal1> [<signal2>]\n", prog_name);
+    printf("   calculate robustness on the given formular and signal traces\n");
+    printf("\n");
+    printf("   <formular>   defines the stl formular, currently only the operator names\n");
+    printf("                can be given: valid operator names:\n");
+    printf("                  AND, OR, NOT, UNTIL, ALW, EVTL\n");
+    printf("   <signal1>    input signal 1\n");
+    printf("   <signal2>    input signal 2\n");
+    printf("\n");
+    printf("   -o file      filename for storing the resulting signal\n");
+    printf("   -c file      compare calculated sig with sig from file\n");
+    printf("   -h           show help (this page)\n");
+    printf("\n");
+}
+
 
 static bool
 _checkCudaError(cudaError_t result,
@@ -84,6 +100,7 @@ binary_operator_test(binary_operator_t op_function,
     return elapsedTime;
 }
 
+
 static float
 unary_operator_test(unary_operator_t op_function,
                     const thrust::host_vector<sigpt_t> &a,
@@ -116,23 +133,6 @@ unary_operator_test(unary_operator_t op_function,
     return elapsedTime;
 }
 
-static void
-usage(char* prog_name)
-{
-    printf("Usage: %s [-o resultfile] <formular> <signal1> [<signal2>]\n", prog_name);
-    printf("   calculate robustness on the given formular and signal traces\n");
-    printf("\n");
-    printf("   <formular>   defines the stl formular, currently only the operator names\n");
-    printf("                can be given: valid operator names:\n");
-    printf("                  AND, OR, NOT, UNTIL, ALW, EVTL\n");
-    printf("   <signal1>    input signal 1\n");
-    printf("   <signal2>    input signal 2\n");
-    printf("\n");
-    printf("   -o file      filename for storing the resulting signal\n");
-    printf("   -c file      compare calculated sig with sig from file\n");
-    printf("   -h           show help (this page)\n");
-    printf("\n");
-}
 
 static void
 print_elapsed_time(const char *formular, 
@@ -146,6 +146,7 @@ print_elapsed_time(const char *formular,
 
     printf(", elapsed time: %.6f s\n", time / 1000);
 }
+
 
 static bool
 read_signal(const char *filename, 
@@ -163,8 +164,6 @@ read_signal(const char *filename,
 }
 
 
-
-
 int
 main(int argc, char **argv)
 {
@@ -179,7 +178,6 @@ main(int argc, char **argv)
     thrust::host_vector<sigpt_t> sig2;
     thrust::host_vector<sigpt_t> result;
     thrust::host_vector<sigpt_t> cmp;
-
 
     while((opt = getopt(argc, argv, "ho:c:")) != -1) {
         switch(opt) {
@@ -214,11 +212,6 @@ main(int argc, char **argv)
     if ( (optind + 2) <= argc )
         sig2_filename = argv[optind + 2];
 
-/*    
-    printf("f: %s, s1: %s, s2: %s\n", formular, sig1_filename, sig2_filename ? sig2_filename : "(null)");
-    if (result_filename)
-        printf("result: %s\n", result_filename);
-*/
 
     /*
      * read signal files
@@ -240,7 +233,8 @@ main(int argc, char **argv)
 
     float time;
     /*
-     * check for operator and execute it
+     * check for operator and execute it 
+     * TODO: can we do this with the parser???
      */
     if (strncmp(formular, "AND", 3) == 0) {
         if (!sig2_filename) {
@@ -289,10 +283,16 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
+    /*
+     * write result file (if needed)
+     */
     if (result_filename) {
         write_signal_file(result_filename, result.data(), result.size());
     }
 
+    /*
+     * check resulting signal with given compare signal (if any)
+     */
     if (cmp_filename) {
         if (!read_signal(cmp_filename, cmp)) {
             fprintf(stderr, "could not read signal from file %s or not enough memory available\n",
