@@ -4,3 +4,6 @@ bake:
 
 clean:
 	rm -rf build
+
+benchmark:
+	matlab/run_benchmark.sh -m matlab -a -n -i 2
