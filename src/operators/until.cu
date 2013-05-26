@@ -7,6 +7,33 @@
 #include "globals.h"
 
 __global__ static void
+until_segm_and_cnst_kernel(const sigpt_t *lhs,
+                           const sigpt_t *rhs,
+                           const int *is_isect,
+                           const int *isect_ixs,
+                           const int n,
+                           sigpt_t *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n - 1; i += blockDim.x * gridDim.x) {
+        const int isect_ix = isect_ixs[i];
+
+        const sigpt_t l = lhs[i];
+        const sigpt_t r = rhs[i];
+
+        const int lhs_is_less = (l.y <= r.y);
+        const int rhs_is_less = !lhs_is_less;
+
+        out[i + isect_ix] = (sigpt_t){ l.t,
+                                       lhs_is_less * l.y + rhs_is_less * r.y,
+                                       lhs_is_less * l.dy + rhs_is_less * r.dy };
+
+        /* Intersection. */
+    }
+}
+
+__global__ static void
 until_mark_isecs(const sigpt_t *lhs,
                  const sigpt_t *rhs,
                  const int n,
@@ -41,14 +68,25 @@ until_segm_and_cnst(const thrust::device_ptr<sigpt_t> &lhs,
      * lhs and rhs. All intersection points clone the previous point in *lhs*.
      */
 
-    thrust::device_ptr<int> isect_ixs = thrust::device_malloc<int>(nrhs);
-    until_mark_isecs<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), nrhs, isect_ixs.get());
+    thrust::device_ptr<int> is_isect = thrust::device_malloc<int>(nrhs);
+    until_mark_isecs<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), nrhs, is_isect.get());
 
-    thrust::exclusive_scan(isect_ixs, isect_ixs + nrhs, isect_ixs);
+    thrust::device_ptr<int> isect_ixs = thrust::device_malloc<int>(nrhs);
+    thrust::exclusive_scan(is_isect, is_isect + nrhs, isect_ixs);
 
     /* For each intersection at point t, isect_ixs[t] now holds the index
      * of the intersection sequence. The length of the combined sequence is
      * nrhs + isect_ixs[nrhs - 1]. */
+
+    const int ndout = nrhs + isect_ixs[nrhs - 1];
+    thrust::device_ptr<sigpt_t> dout = thrust::device_malloc<sigpt_t>(*nout);
+
+    until_segm_and_cnst_kernel<<<NBLOCKS, NTHREADS>>>(
+            lhs.get(), rhs.get(), is_isect.get(),
+            isect_ixs.get(), nrhs, dout.get());
+
+    *nout = ndout;
+    *out = dout;
 }
 
 /**
@@ -71,7 +109,11 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     consolidate(lhs, nlhs, rhs, nrhs, &clhs, &crhs, &nc);
 
-    /* Do smart stuff here. */
+    /* Do smart stuff here. A couple of things to think about:
+     * We can't just assume we're processing signals of segments with dy <= 0
+     * and dy > 0 separately, so we need some way to handle a signal
+     * made up of both rising and falling segments.
+     * We also need to ensure dy is correct before proceeding. */
 
     thrust::device_free(clhs);
     thrust::device_free(crhs);
