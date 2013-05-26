@@ -163,8 +163,11 @@ for tc in $TEST_CASES ; do
 
     test_filename="$TRACES_PATH/$tcname"
 
+    s_count=$(ls -1 ${test_filename}_sig*.trace 2>/dev/null | wc -l)
+    b_count=$(ls -1 ${test_filename}.breach.trace 2>/dev/null | wc -l)
+
     matlab_cmd="loadenv;"
-    if $DO_NOT_WRITE ; then
+    if $DO_NOT_WRITE && [ $s_count -ge 1 -a $b_count -ge 1 ] ; then
         matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
     else
         matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$test_filename', '$test_filename');"
