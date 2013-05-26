@@ -28,17 +28,31 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
             [result, traj] = and_or_test(Sys, createSig1(10, 50, 10000), 'and');
             printResult(test, result);
             
-%            traj.time = sig1.t;
-%            traj.X = [ sig1.y1 ; sig1.y2 ];
-%            result = runTestCase(Sys, '(s1[t] > 0) and (s2[t] > 0)', traj);
-
-%            printResult(test, result);
-%            fprintf('Breach: testcase %s, finished. time: %g s\n',...
-%                    test, result.time);
-
         case 'AND-100000'
             [result, traj] = and_or_test(Sys, createSig1(10, 50, 100000), 'and');
             printResult(test, result);
+            
+        case 'AND-1000000'
+            [result, traj] = and_or_test(Sys, createSig1(20, 80, 1000000), 'and');
+            printResult(test, result);
+            
+            
+        case 'OR-1000'
+            [result, traj] = and_or_test(Sys, createSig1(5, 25, 1000), 'or');
+            printResult(test, result);
+
+        case 'OR-10000'
+            [result, traj] = and_or_test(Sys, createSig1(10, 50, 10000), 'or');
+            printResult(test, result);
+            
+        case 'OR-100000'
+            [result, traj] = and_or_test(Sys, createSig1(10, 50, 100000), 'or');
+            printResult(test, result);
+            
+        case 'OR-1000000'
+            [result, traj] = and_or_test(Sys, createSig1(20, 80, 1000000), 'or');
+            printResult(test, result);
+            
 
         otherwise
             returncode = 1;
