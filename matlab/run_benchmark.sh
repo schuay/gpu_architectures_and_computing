@@ -24,8 +24,16 @@ function usage {
     echo ""
 }
 
+function failure() {
+    echo $1 >&2
+    if $DO_POPD ; then
+        popd >/dev/null
+    fi
+    exit 1
+}
 
 
+DO_POPD=false   # needed for failure if we changed already in maltab dir
 DO_ALL=false
 TEST_CASES=""
 DO_COMPARE=false
@@ -92,52 +100,37 @@ if $DO_ALL && [ ! -z "$TEST_CASES" ] ; then
 fi
 
 # check for breach path
-if [ -z "$BREACH_PATH" -o ! -r "$BREACH_PATH/InitBreach.m" ] ; then
-    echo "error. could not find Breach." >&2
-    echo "please specify path to Breach with -b switch or by BREACH_PATH env. var." >&2
-    exit 1
-fi
+[ ! -z "$BREACH_PATH" -a -r "$BREACH_PATH/InitBreach.m" ] ||
+    failure "error. could not find Breach. please specify path to Breach with -b switch or by BREACH_PATH env. var."
+
+
 # export this environment var (is read by matlab script loadenv.m)
 export BREACH_PATH=$(readlink -f $BREACH_PATH)
 
 # check for gpuac binary
-if [ ! -x "$GPUAC_BIN" ] ; then
-    echo "error. could not find gpuac binary." >&2
-    echo "please specify it via -g switch or with GPUAC_BIN environment varaible" >&2
-    exit 1;
-fi
+[ -x "$GPUAC_BIN" ] || 
+    failure "error. could not find gpuac binary. please specify it via -g switch or with GPUAC_BIN environment varaible"
 GPUAC_BIN=$(readlink -f $GPUAC_BIN)
 
 # change to matlab testing path
 if [ ! -z "$MATLABTESTS_PATH" ] ; then
+    [ -d "$MATLABTESTS_PATH" ] || 
+        failure "path '$MATLABTESTS_PATH' does not exists or is no directory"
     pushd $MATLABTESTS_PATH >/dev/null
     DO_POPD=true
 else
     MATLABTESTS_PATH=.
-    DO_POPD=false
 fi
 MATLABTESTS_PATH=$(readlink -f .)
 
 # check for matlab tests path
-if [ ! -r "benchmarks/benchmark.m" ] ; then
-    echo "error. could not find matlab script 'benchmark.m'. " >&2
-    echo "       please give correct path to matlabtest direcory with -m switch." >&2
-    if $DO_POPD ; then
-        popd >/dev/null
-    fi
-    exit 1
-fi
+[ -r "benchmarks/benchmark.m" ] || 
+    failure "error. could not find matlab script 'benchmark.m'. please give correct path to matlabtest direcory with -m switch."
 
 # check for testcase definition file
 TESTCASES_FILE="$MATLABTESTS_PATH/benchmarks/testcases"
-if [ ! -r "$TESTCASES_FILE" ] ; then
-    echo "error. could not find testcase definition file." >&2
-    echo "expacted it in $TESTCASES_FILE" >&2
-    if $DO_POPD ; then
-        popd > /dev/null
-    fi
-    exit 1
-fi
+[ -r "$TESTCASES_FILE" ] || 
+    failure "error. could not find testcase definition file. expacted it in $TESTCASES_FILE" 
 
 
 # select testcases
@@ -157,6 +150,9 @@ fi
 #TEST_CASES=""
 
 TRACES_PATH="$MATLABTESTS_PATH/benchmarks/traces"
+if [ ! -d "$TRACES_PATH" ] ; then
+    mkdir -p $TRACES_PATH || failure "error creating directory for trace files"
+fi
 
 # test cases loop
 for tc in $TEST_CASES ; do
@@ -175,14 +171,11 @@ for tc in $TEST_CASES ; do
     fi
     matlab_cmd="$matlab_cmd exit(r)"
     
-    echo -n "  "
-    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd" | tail -n +12
+    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd" | tail -n +10
     result=$?
 
-    if [ $result -ne 0 ] ; then
-        echo "error: test case $tc not defined. exiting" >&2
-        break
-    fi
+    [ $result -eq 0 ] ||
+        failure "error: test case $tc not defined. exiting"
 
     gpuac_arg=""
     if ! $DO_NOT_WRITE ; then
@@ -192,19 +185,16 @@ for tc in $TEST_CASES ; do
         gpuac_arg="$gpuac_arg -c ${test_filename}.breach.trace"
     fi
 
-    echo -n "  "
     $GPUAC_BIN $gpuac_arg $operator ${test_filename}_sig*.trace
     result=$?
 
-    if [ $result -ne 0 ] ; then
-        echo "error: gpuac execution was not successfull" >&2
-        break
-    fi
+    [ $result -eq 0 ] ||
+        failure "error: gpuac execution was not successfull"
 
     if $DO_REMOVE ; then
         rm -f ${test_filename}_sig*.trace 
-        rm -f ${test_name}.breach.trace 
-        rm -f ${test_name}.gpuac.trace
+        rm -f ${test_filename}.breach.trace 
+        rm -f ${test_filename}.gpuac.trace
     fi
 
     echo 
