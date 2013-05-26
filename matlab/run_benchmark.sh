@@ -20,6 +20,9 @@ function usage {
     echo "   -c           compare both result files"
     echo "   -n           do not write files, instead use the existing ones"
     echo "   -r           remove files after test case execution"
+    echo "   -i num       number of iteration per test case"
+    echo "                Breach is significant slower when executing it the first "
+    echo "                time. so increas this number to run the test case more times"
     echo "   -h           show help (this page)"
     echo ""
 }
@@ -39,7 +42,8 @@ TEST_CASES=""
 DO_COMPARE=false
 DO_NOT_WRITE=false
 DO_REMOVE=false
-while getopts "hat:m:b:g:cnr" opt ; do
+TC_ITERATIONS=1
+while getopts "hat:m:b:g:cnri:" opt ; do
     case $opt in 
         a)  
             DO_ALL=true
@@ -71,6 +75,15 @@ while getopts "hat:m:b:g:cnr" opt ; do
 
         r)
             DO_REMOVE=true
+            ;;
+
+        i)  
+            TC_ITERATIONS=$OPTARG
+            if ! [ $TC_ITERATIONS -ge 1 ] 2>/dev/null ; then
+                echo "argument of -i '$OPTARG' not a number or less than one" >&2
+                usage
+                exit 1
+            fi
             ;;
 
         h)
@@ -137,10 +150,10 @@ TESTCASES_FILE="$MATLABTESTS_PATH/benchmarks/testcases"
 if [ ! -z "$TEST_CASES" ] ; then
     # remove leading ' ' and replace ' ' by '\|'
     grep_arg=$(echo $TEST_CASES | sed 's/^ //' | sed 's/ /\\|/g')
-    TEST_CASES=$(grep ":\($grep_arg\)\$" $TESTCASES_FILE)
+    TEST_CASES=$(grep -v '^#' | grep ":\($grep_arg\)\$" $TESTCASES_FILE)
 
 elif $DO_ALL ; then
-    TEST_CASES=$(cat $TESTCASES_FILE)
+    TEST_CASES=$(grep -v '^#' $TESTCASES_FILE)
 
 else
     echo "no test cases defined or found"
@@ -167,6 +180,11 @@ for tc in $TEST_CASES ; do
     b_count=$(ls -1 ${test_filename}.breach.trace 2>/dev/null | wc -l)
 
     matlab_cmd="loadenv;"
+    iter=$(($TC_ITERATIONS - 1))
+    while [ $iter -gt 0 ] ; do
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
+        iter=$(($iter - 1))
+    done
     if $DO_NOT_WRITE && [ $s_count -ge 1 -a $b_count -ge 1 ] ; then
         matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
     else
@@ -193,6 +211,14 @@ for tc in $TEST_CASES ; do
 
     [ $result -eq 0 ] ||
         failure "error: gpuac execution was not successfull"
+
+    # now do the multiple gpu iterations
+    iter=$(($TC_ITERATIONS - 1))
+    while [ $iter -gt 0 ] ; do
+        iter=$(($iter - 1))
+        $GPUAC_BIN $operator ${test_filename}_sig*.trace
+        [ $? -eq 0 ] || break
+    done
 
     if $DO_REMOVE ; then
         rm -f ${test_filename}_sig*.trace 
