@@ -219,13 +219,13 @@ main(int argc, char **argv)
      * read signal files
      */
     if (!read_signal(sig1_filename, sig1)) {
-        fprintf(stderr, "could not open signal file '%s' or to less memory available.\n", 
+        fprintf(stderr, "could not open signal file '%s' or too less memory available.\n", 
                 sig1_filename);
         exit(EXIT_FAILURE);
     }
     if (sig2_filename) {
         if (!read_signal(sig2_filename, sig2)) {
-            fprintf(stderr, "could not open signal file '%s' or to less memory available.\n", 
+            fprintf(stderr, "could not open signal file '%s' or too less memory available.\n", 
                     sig2_filename);
             exit(EXIT_FAILURE);
         }
