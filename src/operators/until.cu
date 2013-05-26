@@ -1,7 +1,62 @@
 #include "until.hpp"
 
-#include "consolidate.hpp"
+#include <assert.h>
+#include <thrust/scan.h>
 
+#include "consolidate.hpp"
+#include "globals.h"
+
+__global__ static void
+until_mark_isecs(const sigpt_t *lhs,
+                 const sigpt_t *rhs,
+                 const int n,
+                 int *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n - 1; i += blockDim.x * gridDim.x) {
+        const sigpt_t l = lhs[i];
+        const sigpt_t r1 = rhs[i];
+        const sigpt_t r2 = rhs[i + 1];
+        const int is_isec = (l.y < r1.y && l.y > r2.y) ||
+                            (l.y > r1.y && l.y < r2.y);
+        out[i] = is_isec;
+    }
+}
+
+/**
+ * AND of a signal rhs and a segment-wise constant lhs.
+ * lhs and rhs must be consolidated.
+ */
+static void
+until_segm_and_cnst(const thrust::device_ptr<sigpt_t> &lhs,
+                    const int nlhs,
+                    const thrust::device_ptr<sigpt_t> &rhs,
+                    const int nrhs,
+                    thrust::device_ptr<sigpt_t> *out,
+                    int *nout)
+{
+    /* In step one, we need to detect all points where the constant signal lhs[t]
+     * intersects rhs[t, t+1] and use these to create new signals for both
+     * lhs and rhs. All intersection points clone the previous point in *lhs*.
+     */
+
+    thrust::device_ptr<int> isect_ixs = thrust::device_malloc<int>(nrhs);
+    until_mark_isecs<<<NBLOCKS, NTHREADS>>>(lhs.get(), rhs.get(), nrhs, isect_ixs.get());
+
+    thrust::exclusive_scan(isect_ixs, isect_ixs + nrhs, isect_ixs);
+
+    /* For each intersection at point t, isect_ixs[t] now holds the index
+     * of the intersection sequence. The length of the combined sequence is
+     * nrhs + isect_ixs[nrhs - 1]. */
+}
+
+/**
+ * This implementation follows algorithm 2 presented in 
+ * Efficient Robust Monitoring for STL.
+ * We use iz1, iz2, iz2 when referring to z{1,2,3} in the if branch,
+ * and ez1, ez2, ez3 in the else branch.
+ */
 void
 stl_until(const thrust::device_ptr<sigpt_t> &lhs,
           const int nlhs,
