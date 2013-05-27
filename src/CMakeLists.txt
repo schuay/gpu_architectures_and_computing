@@ -11,10 +11,10 @@ include_directories(
 
 cuda_add_library(consolidate consolidate.cu)
 
-cuda_add_executable(gpuac
+cuda_add_executable(stl_bench
     ${SOURCES}
 )
-target_link_libraries(gpuac
+target_link_libraries(stl_bench
     stl_and
     stl_evtl
     stl_not

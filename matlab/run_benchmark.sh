@@ -3,7 +3,7 @@
 # matlab binary
 MATLAB_BIN="matlab"
 
-GPUAC_BIN="build/src/gpuac"
+BENCH_BIN="build/src/stl_bench"
 
 function usage {
     echo $(basename $0)": run the benchmark test with breach and the gpu implemtation"
@@ -15,8 +15,8 @@ function usage {
     echo "                can also be defined via MATLABTESTS_PATH env. variable"
     echo "   -b dir       path to Breach directory"
     echo "                can also be defined via BREACH_PATH env. variable"
-    echo "   -g file      gpuac executable (default: $GPUAC_BIN)"
-    echo "                can alos be defined via GPUAC_BIN environmen variable"
+    echo "   -g file      stl_bench executable (default: $BENCH_BIN)"
+    echo "                can also be defined via BENCH_BIN environment variable"
     echo "   -c           compare both result files"
     echo "   -n           do not write files, instead use the existing ones"
     echo "   -r           remove files after test case execution"
@@ -62,7 +62,7 @@ while getopts "hat:m:b:g:cnri:" opt ; do
             ;;
 
         g)
-            GPUAC_BIN=$OPTARG
+            BENCH_BIN=$OPTARG
             ;;
 
         c)
@@ -120,10 +120,10 @@ fi
 # export this environment var (is read by matlab script loadenv.m)
 export BREACH_PATH=$(readlink -f $BREACH_PATH)
 
-# check for gpuac binary
-[ -x "$GPUAC_BIN" ] || 
-    failure "error. could not find gpuac binary. please specify it via -g switch or with GPUAC_BIN environment varaible"
-GPUAC_BIN=$(readlink -f $GPUAC_BIN)
+# check for stl_bench binary
+[ -x "$BENCH_BIN" ] || 
+    failure "error. could not find stl_bench binary. please specify it via -g switch or with BENCH_BIN environment varaible"
+BENCH_BIN=$(readlink -f $BENCH_BIN)
 
 # change to matlab testing path
 if [ ! -z "$MATLABTESTS_PATH" ] ; then
@@ -198,25 +198,25 @@ for tc in $TEST_CASES ; do
     [ $result -eq 0 ] ||
         failure "error: test case $tc not defined. exiting"
 
-    gpuac_arg=""
+    stl_bench_arg=""
     if ! $DO_NOT_WRITE ; then
-        gpuac_arg="$gpuac_arg -o ${test_filename}.gpuac.trace"
+        stl_bench_arg="$stl_bench_arg -o ${test_filename}.gpuac.trace"
     fi
     if $DO_COMPARE ; then
-        gpuac_arg="$gpuac_arg -c ${test_filename}.breach.trace"
+        stl_bench_arg="$stl_bench_arg -c ${test_filename}.breach.trace"
     fi
 
-    $GPUAC_BIN $gpuac_arg $operator ${test_filename}_sig*.trace
+    $BENCH_BIN $stl_bench_arg $operator ${test_filename}_sig*.trace
     result=$?
 
     [ $result -eq 0 ] ||
-        failure "error: gpuac execution was not successfull"
+        failure "error: stl_bench execution was not successful"
 
     # now do the multiple gpu iterations
     iter=$(($TC_ITERATIONS - 1))
     while [ $iter -gt 0 ] ; do
         iter=$(($iter - 1))
-        $GPUAC_BIN $operator ${test_filename}_sig*.trace
+        $BENCH_BIN $operator ${test_filename}_sig*.trace
         [ $? -eq 0 ] || break
     done
 
