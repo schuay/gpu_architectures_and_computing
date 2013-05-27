@@ -89,6 +89,22 @@ until_segm_and_cnst(const thrust::device_ptr<sigpt_t> &lhs,
     *out = dout;
 }
 
+__global__ static void
+derivates(sigpt_t *sig,
+          const int n)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n - 1; i += blockDim.x * gridDim.x) {
+        const sigpt_t p1 = sig[i];
+        const sigpt_t p2 = sig[i + 1];
+
+        /* Assumes p1.t != p2.t. */
+
+        sig[i].dy = (p2.y - p1.y) / (p2.t - p1.t);
+    }
+}
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -108,6 +124,11 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     int nc;
 
     consolidate(lhs, nlhs, rhs, nrhs, &clhs, &crhs, &nc);
+
+    /* TODO: Remove this once (if) all input signals have valid dy's. */
+
+    derivates<<<NTHREADS, NBLOCKS>>>(clhs.get(), nc);
+    derivates<<<NTHREADS, NBLOCKS>>>(crhs.get(), nc);
 
     /* Do smart stuff here. A couple of things to think about:
      * We can't just assume we're processing signals of segments with dy <= 0
