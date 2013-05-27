@@ -6,12 +6,12 @@ MATLAB_BIN="matlab"
 BENCH_BIN="build/src/stl_bench"
 
 function usage {
-    echo $(basename $0)": run the benchmark test with breach and the gpu implemtation"
+    echo $(basename $0)": run the benchmark test with breach and the gpu implementation"
     echo ""
     echo " usage: "
     echo "   -a           run all defined test cases"
     echo "   -t testcase  run only the given testcase (can be given multiple times)"
-    echo "   -m dir       direcotry containing the matlab tests"
+    echo "   -m dir       directory containing the matlab tests"
     echo "                can also be defined via MATLABTESTS_PATH env. variable"
     echo "   -b dir       path to Breach directory"
     echo "                can also be defined via BREACH_PATH env. variable"
@@ -20,9 +20,9 @@ function usage {
     echo "   -c           compare both result files"
     echo "   -n           do not write files, instead use the existing ones"
     echo "   -r           remove files after test case execution"
-    echo "   -i num       number of iteration per test case"
+    echo "   -i num       number of iterations per test case"
     echo "                Breach is significant slower when executing it the first "
-    echo "                time. so increas this number to run the test case more times"
+    echo "                time. so increase this number to run the test case more times"
     echo "   -h           show help (this page)"
     echo ""
 }
@@ -138,12 +138,12 @@ MATLABTESTS_PATH=$(readlink -f .)
 
 # check for matlab tests path
 [ -r "benchmarks/benchmark.m" ] || 
-    failure "error. could not find matlab script 'benchmark.m'. please give correct path to matlabtest direcory with -m switch."
+    failure "error. could not find matlab script 'benchmark.m'. please give correct path to matlabtest directory with -m switch."
 
 # check for testcase definition file
 TESTCASES_FILE="$MATLABTESTS_PATH/benchmarks/testcases"
 [ -r "$TESTCASES_FILE" ] || 
-    failure "error. could not find testcase definition file. expacted it in $TESTCASES_FILE" 
+    failure "error. could not find testcase definition file. expected it in $TESTCASES_FILE" 
 
 
 # select testcases
