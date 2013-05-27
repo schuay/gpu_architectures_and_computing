@@ -123,18 +123,18 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
     end
 end
 
-function [ result ] = runTestCase( Sys, formular, traj )
+function [ result ] = runTestCase( Sys, formula, traj )
 %RUNTESTCASE run one testcase on the defined input parameter
-%   run testcase with the given formular and the defined traj array
+%   run testcase with the given formula and the defined traj array
 %
 %   Sys       Breach System
-%   formular  Breach STL formular for this testcase
+%   formula   Breach STL formula for this testcase
 %   traj      signal traces 
 %             traj.X    ... signals
 %             traj.time ... time domain
 %
 
-    QMITL_Formula('stl_formular', formular);
+    QMITL_Formula('stl_formula', formula);
             
     traj.param = Sys.p;
             
@@ -142,10 +142,10 @@ function [ result ] = runTestCase( Sys, formular, traj )
     P.pts = traj.param';
     P.traj = traj;
             
-    QMITL_Eval(Sys, stl_formular, P, traj); % for some reason we have to call this first
+    QMITL_Eval(Sys, stl_formula, P, traj); % for some reason we have to call this first
     
     tic;
-    result.val = QMITL_Eval2raw(Sys, stl_formular, traj);
+    result.val = QMITL_Eval2raw(Sys, stl_formula, traj);
     result.time = toc;
     
 end

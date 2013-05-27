@@ -39,10 +39,10 @@ static char *prog_name = NULL;
 static void
 usage()
 {
-    printf("Usage: %s [-o resultfile] <formular> <signal1> [<signal2>]\n", prog_name);
-    printf("   calculate robustness on the given formular and signal traces\n");
+    printf("Usage: %s [-o resultfile] <formula> <signal1> [<signal2>]\n", prog_name);
+    printf("   calculate robustness on the given formula and signal traces\n");
     printf("\n");
-    printf("   <formular>   defines the stl formular, currently only the operator names\n");
+    printf("   <formula>    defines the stl formula, currently only the operator names\n");
     printf("                can be given: valid operator names:\n");
     printf("                  AND, OR, NOT, UNTIL, ALW, EVTL\n");
     printf("   <signal1>    input signal 1\n");
@@ -138,12 +138,12 @@ unary_operator_test(unary_operator_t op_function,
 
 
 static void
-print_elapsed_time(const char *formular, 
+print_elapsed_time(const char *formula, 
                    const char *sig1_file, 
                    const char *sig2_file,
                    float time) 
 {
-    printf("%s: finished test %s ", prog_name, formular);
+    printf("%s: finished test %s ", prog_name, formula);
     printf(" elapsed time: %.6f s\n", time / 1000); // print in sec to be inline with matlab
 }
 
@@ -172,7 +172,7 @@ main(int argc, char **argv)
     char *sig1_filename = NULL;
     char *sig2_filename = NULL;
     char *cmp_filename = NULL;
-    char *formular;
+    char *formula;
 
     prog_name = basename(argv[0]);
 
@@ -204,12 +204,12 @@ main(int argc, char **argv)
     }
 
     if ( (optind + 1) >= argc ) {
-        fprintf(stderr, "Expected formular and input signal filename\n");
+        fprintf(stderr, "Expected formula and input signal filename\n");
         usage();
         exit(EXIT_FAILURE);
     }
 
-    formular = argv[optind];
+    formula = argv[optind];
     sig1_filename = argv[optind + 1];
     if ( (optind + 2) <= argc )
         sig2_filename = argv[optind + 2];
@@ -238,50 +238,50 @@ main(int argc, char **argv)
      * check for operator and execute it 
      * TODO: can we do this with the parser???
      */
-    if (strncmp(formular, "AND", 3) == 0) {
+    if (strncmp(formula, "AND", 3) == 0) {
         if (!sig2_filename) {
             fprintf(stderr, "AND operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
         time = binary_operator_test(stl_and, sig1, sig2, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
-    } else if (strncmp(formular, "OR", 2) == 0) {
+    } else if (strncmp(formula, "OR", 2) == 0) {
         if (!sig2_filename) {
             fprintf(stderr, "OR operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
         time = binary_operator_test(stl_or, sig1, sig2, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
     
-    } else if (strncmp(formular, "NOT", 3) == 0) {
+    } else if (strncmp(formula, "NOT", 3) == 0) {
 
         time = unary_operator_test(stl_not, sig1, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
     
-    } else if (strncmp(formular, "UNTIL", 5) == 0) {
+    } else if (strncmp(formula, "UNTIL", 5) == 0) {
         if (!sig2_filename) {
             fprintf(stderr, "UNTIL operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
         time = binary_operator_test(stl_until, sig1, sig2, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
-    } else if (strncmp(formular, "ALW", 3) == 0) {
+    } else if (strncmp(formula, "ALW", 3) == 0) {
     
         time = unary_operator_test(stl_alw, sig1, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
-    } else if (strncmp(formular, "EVTL", 4) == 0) {
+    } else if (strncmp(formula, "EVTL", 4) == 0) {
     
         time = unary_operator_test(stl_evtl, sig1, result);
-        print_elapsed_time(formular, sig1_filename, sig2_filename, time);
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
     } else {
-        fprintf(stderr, "unknown operator '%s'\n", formular);
+        fprintf(stderr, "unknown operator '%s'\n", formula);
         exit(EXIT_FAILURE);
     }
 
