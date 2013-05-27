@@ -1,26 +1,24 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>   /* getopt */
 #include <libgen.h>   /* basename */
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
-#include <thrust/device_ptr.h>
+#include <unistd.h>   /* getopt */
 
 extern "C" {
 #include "sigpt.h"
 #include "util.h"
 }
 
+#include "globals.h"
+#include "operators/alw.hpp"
 #include "operators/and.hpp"
 #include "operators/evtl.hpp"
-#include "operators/or.hpp"
 #include "operators/not.hpp"
-#include "operators/alw.hpp"
+#include "operators/or.hpp"
 #include "operators/until.hpp"
-#include "globals.h"
-
 #include "sigcmp.hpp"
 
 
