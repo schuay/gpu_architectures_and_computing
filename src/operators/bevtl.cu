@@ -30,6 +30,7 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
     bevtl_rmax<<<NBLOCKS, NTHREADS>>>(in.get(), t - s + 1, maxs.get(), nin);
 
     thrust::host_vector<sigpt_t> h(in, in + nin);
+    /* TODO: Remove me.
     sigpt_print("in", h.data(), nin);
 
     printf("maxs (s: %d, t: %d)\n", s, t);
@@ -37,6 +38,7 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
         const float f = maxs[i];
         printf("%d: %f\n", i, f);
     }
+    */
 }
 
 __global__ static void
