@@ -223,6 +223,30 @@ seq_evtl(const sigpt_t *in,
     *out = zs_final;
 }
 
+__global__ static void
+mark_positive_dys(const sigpt_t *in,
+                  const int n,
+                  int *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        out[i] = (in[i].dy > 0.f);
+    }
+}
+
+__global__ static void
+mark_negative_dys(const sigpt_t *in,
+                  const int n,
+                  int *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        out[i] = (in[i].dy <= 0.f);
+    }
+}
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -247,6 +271,22 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     derivates<<<NTHREADS, NBLOCKS>>>(clhs.get(), nc);
     derivates<<<NTHREADS, NBLOCKS>>>(crhs.get(), nc);
+
+    thrust::device_ptr<int> indices_of_negative_dys =
+        thrust::device_malloc<int>(nc);
+    mark_negative_dys<<<NBLOCKS, NTHREADS>>>(clhs.get(), nc,
+            indices_of_negative_dys.get());
+    thrust::exclusive_scan(indices_of_negative_dys,
+            indices_of_negative_dys + nc,
+            indices_of_negative_dys);
+
+    thrust::device_ptr<int> indices_of_positive_dys =
+        thrust::device_malloc<int>(nc);
+    mark_positive_dys<<<NBLOCKS, NTHREADS>>>(clhs.get(), nc,
+            indices_of_positive_dys.get());
+    thrust::exclusive_scan(indices_of_positive_dys,
+            indices_of_positive_dys + nc,
+            indices_of_positive_dys);
 
     /* Do smart stuff here. A couple of things to think about:
      * We can't just assume we're processing signals of segments with dy <= 0
