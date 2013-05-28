@@ -247,6 +247,25 @@ mark_negative_dys(const sigpt_t *in,
     }
 }
 
+__global__ static void
+extract_indices_by_dy(const sigpt_t *sig,
+                      const int n,
+                      const int *negative_indices,
+                      const int *positive_indices,
+                      int *negatives,
+                      int *positives)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        if (sig[i].dy <= 0.f) {
+            negatives[negative_indices[i]] = i;
+        } else {
+            positives[positive_indices[i]] = i;
+        }
+    }
+}
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -287,6 +306,24 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::exclusive_scan(indices_of_positive_dys,
             indices_of_positive_dys + nc,
             indices_of_positive_dys);
+
+    const int nnegative_dys = indices_of_negative_dys[nc - 1];
+    thrust::device_ptr<int> negative_dys =
+        thrust::device_malloc<int>(nnegative_dys);
+
+    const int npositive_dys = indices_of_positive_dys[nc - 1];
+    thrust::device_ptr<int> positive_dys =
+        thrust::device_malloc<int>(npositive_dys);
+
+    extract_indices_by_dy<<<NBLOCKS, NTHREADS>>>(
+            clhs.get(), nc,
+            indices_of_negative_dys.get(),
+            indices_of_positive_dys.get(),
+            negative_dys.get(),
+            positive_dys.get());
+
+    /* negative_dys now holds all indices of negative dy's in clhs,
+     * and positive_dys all indices of positive dy's in clhs. */
 
     /* Do smart stuff here. A couple of things to think about:
      * We can't just assume we're processing signals of segments with dy <= 0
