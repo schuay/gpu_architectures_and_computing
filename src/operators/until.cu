@@ -188,6 +188,22 @@ mark_negative_dys(const sigpt_t *in,
     }
 }
 
+/**
+ * Well, this turned into a rather ugly function.
+ * What it actually does is: it takes the raw input
+ * signals lhs and rhs together with their element count n;
+ * two integer arrays negative_indices / positive_indices
+ * specifying the compacted target indices of elements with respectively
+ * negative (or 0) or positive dy in lhs; and finally,
+ * target arrays.
+ *
+ * We construct an interval from the current location by storing both
+ * the current point and its predecessor together with the original index
+ * in lhs / rhs.
+ *
+ * If the current lhs.dy is negative, we store the current lhs and rhs
+ * interval into neg_{lhs,rhs}. Otherwise, it is stored into pos_{lhs, rhs}.
+ */
 __global__ static void
 extract_ivalpts_by_dy(const sigpt_t *lhs,
                       const sigpt_t *rhs,
