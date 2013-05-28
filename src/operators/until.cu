@@ -8,10 +8,13 @@
 #include "intersect.hpp"
 #include "globals.h"
 
+/* TODO: Determine the actual max count of points in an interval. */
+#define IVALPT_COUNT (10)
+
 typedef struct {
-    int i;            /* The original index this interval came from. */
-    sigpt_t pts[10];  /* TODO: Determine the actual max count of points in an interval. */
-    int n;            /* The count of points in this interval. */
+    int i;                      /* The original index this interval came from. */
+    sigpt_t pts[IVALPT_COUNT];  /* The points contained in this interval. */
+    int n;                      /* The count of points in this interval. */
 } ivalpt_t;
 
 #include <stdio.h> /* TODO: Remove me. */
@@ -278,38 +281,19 @@ ivalpt_extract_by_dy(const sigpt_t *lhs,
     }
 }
 
-/* TODO: Remove this once we have a segment EVTL implementation.
- * That one will need to take an array of ivalpt_t as input as
- * well as output. */
 __global__ static void
-naive_evtl(const ivalpt_t *in,
-           const int n,
-           ivalpt_t *out)
+segment_evtl(const ivalpt_t *in,
+             const int n,
+             ivalpt_t *out)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         const ivalpt_t ival_in = in[i];
-        
         ivalpt_t ival_out = ival_in;
+        ival_out.n = IVALPT_COUNT;
 
-        /* EVTL applied to a point results in the point. */
-
-        if (ival_in.n == 1) {
-            out[i] = ival_out;
-            continue;
-        }
-
-        /* Otherwise, it's the maximum y of the current point and its successor. 
-         * TODO: Don't assume an interval of two points. */
-
-        const sigpt_t s = ival_in.pts[0];
-        const sigpt_t t = ival_in.pts[1];
-        sigpt_t result = (s.y > t.y) ? s : t;
-        result.t = s.t;
-
-        ival_out.pts[0] = result;
-        ival_out.n = 2;
+        seq_evtl_internal(ival_in.pts, ival_in.n, ival_out.pts, &ival_out.n);
 
         out[i] = ival_out;
     }
@@ -387,7 +371,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
      * rhs (it still depends on dy's in clhs though!) */
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
-    naive_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
+    segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
     /* ================== The sequential implementation starts here. ================== */
 
