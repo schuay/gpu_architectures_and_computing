@@ -5,6 +5,7 @@
 #include <thrust/scan.h>
 
 #include "consolidate.hpp"
+#include "intersect.hpp"
 #include "globals.h"
 
 typedef struct {
@@ -75,10 +76,13 @@ seq_bin(const sigpt_t *lhs,
         const sig_binary f)
 {
     sigpt_t *dout = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
+    sigpt_t *lhsi = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
+    sigpt_t *rhsi = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
 
     int i = 0;
     int j = 0;
     int k = 0;
+    int m = 0;
 
     while (i < nlhs && j < nrhs) {
         sigpt_t l = lhs[i];
@@ -97,15 +101,37 @@ seq_bin(const sigpt_t *lhs,
             j++;
         }
 
-        dout[k] = f(l, r);
-        k++;
+        lhsi[m] = l;
+        rhsi[m] = r;
+        m++;
     }
 
     assert(i == nlhs && j == nrhs);
-    assert(k <= 2 * (nlhs + nrhs));
+    assert(m <= 2 * (nlhs + nrhs));
+
+    int l = 0;
+    for (k = 0; k < m - 1; k++) {
+        dout[l++] = f(lhsi[k], rhsi[k]);
+
+        float t;
+        if (intersect(&lhsi[k], &rhsi[k], &lhsi[k + 1], &rhsi[k + 1], &t)) {
+            sigpt_t a, b;
+            a = interpolate(&lhsi[k], &lhsi[k + 1], t);
+            b = interpolate(&rhsi[k], &rhsi[k + 1], t);
+
+            dout[l++] = f(a, b);
+        }
+    }
+
+    dout[l++] = f(lhsi[k], rhsi[k]);
+
+    assert(l <= 2 * (nlhs + nrhs));
 
     *out = dout;
-    *nout = k;
+    *nout = l;
+
+    free(lhsi);
+    free(rhsi);
 }
 
 void
@@ -373,7 +399,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     int i = nc - 2;
     int j = nres - 2;
-    float z = FLT_MAX * -1;
+    float z = -INFINITY;
 
     /* The final point is simply an AND. */
     result[nres - 1] = seq_bin_and(hlhs[nc - 1], hrhs[nc - 1]);
