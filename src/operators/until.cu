@@ -7,6 +7,30 @@
 #include "consolidate.hpp"
 #include "globals.h"
 
+typedef struct {
+    int i;            /* The original index this interval came from. */
+    sigpt_t pts[10];  /* TODO: Determine the actual max count of points in an interval. */
+    int n;            /* The count of points in this interval. */
+} ivalpt_t;
+
+#include <stdio.h> /* TODO: Remove me. */
+
+static void
+ivalpt_print(const char *name,
+             const thrust::device_ptr<ivalpt_t> &in,
+             const int n)
+{
+    printf("%s (%d)\n", name, n);
+    for (int i = 0; i < n; i++) {
+        ivalpt_t pt = in[i];
+        printf("ivalpt_t { i: %d, n: %d }\n", pt.i, pt.n);
+        for (int j = 0; j < pt.n; j++) {
+            sigpt_t sigpt = pt.pts[j];
+            printf("%i: {t: %f, y: %f, dy: %f}\n", j, sigpt.t, sigpt.y, sigpt.dy);
+        }
+    }
+}
+
 __global__ static void
 until_segm_and_cnst_kernel(const sigpt_t *lhs,
                            const sigpt_t *rhs,
@@ -266,23 +290,31 @@ extract_indices_by_dy(const sigpt_t *sig,
     }
 }
 
+/* TODO: Remove this once we have a segment EVTL implementation.
+ * That one will need to take an array of ivalpt_t as input as
+ * well as output. */
 __global__ static void
 naive_evtl(const sigpt_t *sig,
            const int nsig,
            const int *indices,
            const int nind,
-           sigpt_t *out)
+           ivalpt_t *out)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < nind; i += blockDim.x * gridDim.x) {
         const int ind = indices[i];
         const sigpt_t s = sig[ind];
+        
+        ivalpt_t ival;
+        ival.i = ind;
 
         /* The last point always results in itself. */
 
         if (ind == nsig - 1) {
-            out[i] = s;
+            ival.pts[0] = s;
+            ival.n = 1;
+            out[i] = ival;
             continue;
         }
 
@@ -292,7 +324,11 @@ naive_evtl(const sigpt_t *sig,
         sigpt_t result = (s.y > t.y) ? s : t;
         result.t = s.t;
 
-        out[i] = result;
+        ival.pts[0] = result;
+        ival.pts[1] = t;
+        ival.n = 2;
+
+        out[i] = ival;
     }
 }
 
@@ -355,7 +391,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     /* negative_dys now holds all indices of negative dy's in clhs,
      * and positive_dys all indices of positive dy's in clhs. */
 
-    thrust::device_ptr<sigpt_t> iz1 = thrust::device_malloc<sigpt_t>(nnegative_dys);
+    thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     naive_evtl<<<NBLOCKS, NTHREADS>>>(
             clhs.get(), nc,
             negative_dys.get(), nnegative_dys,
