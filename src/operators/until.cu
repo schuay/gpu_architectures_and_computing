@@ -140,54 +140,47 @@ seq_evtl(const sigpt_t *in,
          sigpt_t **out,
          int *nout)
 {
+    const int nzs = 2 * nin;
+    sigpt_t *zs = (sigpt_t*) malloc(nzs * sizeof(sigpt_t));
+
     int i = nin - 1;
-    sigpt_t *zs = (sigpt_t*) malloc(2 * nin * sizeof(sigpt_t));
-    sigpt_t *zs_final;
-    int *cs = (int*) calloc(2 * nin, sizeof(int));
-    int *fs = (int*) malloc(2 * nin * sizeof(int));
+    int j = nzs - 1;
 
-    zs[i * 2] = in[i];
-    cs[i * 2] = 1;
+    zs[j] = in[i];
+
     i--;
+    j--;
 
-    for (; i >= 0; i--) {
-        sigpt_t tmp;
-        tmp.t = in[i].t;
-        tmp.y = CUDA_MAX(in[i].y, zs[(i + 1) * 2].y);
+    while (i >= 0) {
+        assert(j > 0);
 
-        zs[i * 2] = tmp;
-        cs[i * 2] = 1;
+        const sigpt_t prev = zs[j + 1];
+        sigpt_t curr       = in[i];
+        curr.y = CUDA_MAX(in[i].y, prev.y);
 
-        const sigpt_t prev = zs[(i + 1) * 2];
         if (in[i].y > prev.y && in[i + 1].y < prev.y) {
-            cs[i * 2 + 1] = 1;
-            zs[i * 2 + 1].t = prev.t +
-                (prev.t - zs[i * 2].t) *
-                (prev.y - in[i + 1].y) / (in[i + 1].y - in[i].y);
-            zs[i * 2 + 1].y = prev.y;
+            float t;
+            const int is_isec = intersect(&prev, &in[i], &prev, &in[i + 1], &t); 
+            assert(is_isec);
+
+            zs[j] = (sigpt_t){ t, prev.y, 0 };
+
+            j--;
         }
+
+        zs[j] = curr;
+
+        i--;
+        j--;
     }
 
-    fs[0] = 0;
-    for (i = 1; i < 2 * nin; i++) {
-        fs[i] = fs[i - 1] + cs[i - 1];
-    }
+    const int ndout = nzs - j - 1;
+    sigpt_t *dout = (sigpt_t*) malloc(ndout * sizeof(sigpt_t));
 
-    *nout = fs[2 * nin - 1];
+    memcpy(dout, zs + j + 1, ndout * sizeof(sigpt_t));
 
-    zs_final = (sigpt_t*) malloc(2 * (*nout) * sizeof(sigpt_t));
-
-    for (i = 0; i < 2 * nin; i++) {
-        if(cs[i] == 1) {
-            zs_final[fs[i]] = zs[i];
-        }
-    }
-
-    free(zs);
-    free(cs);
-    free(fs);
-
-    *out = zs_final;
+    *out = dout;
+    *nout = ndout;
 }
 
 __global__ static void
