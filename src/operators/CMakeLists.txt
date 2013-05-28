@@ -1,6 +1,7 @@
 cuda_add_library(stl_and and.cu)
 target_link_libraries(stl_and consolidate)
 cuda_add_library(stl_alw alw.cu)
+target_link_libraries(stl_alw stl_evtl stl_not)
 cuda_add_library(stl_balw balw.cu)
 cuda_add_library(stl_bevtl bevtl.cu)
 cuda_add_library(stl_buntil buntil.cu)
