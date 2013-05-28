@@ -231,15 +231,15 @@ mark_negative_dys(const sigpt_t *in,
  * interval into neg_{lhs,rhs}. Otherwise, it is stored into pos_{lhs, rhs}.
  */
 __global__ static void
-extract_ivalpts_by_dy(const sigpt_t *lhs,
-                      const sigpt_t *rhs,
-                      const int n,
-                      const int *negative_indices,
-                      const int *positive_indices,
-                      ivalpt_t *neg_lhs,
-                      ivalpt_t *neg_rhs,
-                      ivalpt_t *pos_lhs,
-                      ivalpt_t *pos_rhs)
+ivalpt_extract_by_dy(const sigpt_t *lhs,
+                     const sigpt_t *rhs,
+                     const int n,
+                     const int *negative_indices,
+                     const int *positive_indices,
+                     ivalpt_t *neg_lhs,
+                     ivalpt_t *neg_rhs,
+                     ivalpt_t *pos_lhs,
+                     ivalpt_t *pos_rhs)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -310,6 +310,7 @@ naive_evtl(const ivalpt_t *in,
     }
 }
 
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -324,16 +325,20 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
           thrust::device_ptr<sigpt_t> *out,
           int *nout)
 {
+    /* First, ensure both incoming signals are well formed. */
+
     thrust::device_ptr<sigpt_t> clhs;
     thrust::device_ptr<sigpt_t> crhs;
     int nc;
 
     consolidate(lhs, nlhs, rhs, nrhs, &clhs, &crhs, &nc);
 
-    /* TODO: Remove this once (if) all input signals have valid dy's. */
+    /* Set dy for all points. */
 
     derivates<<<NTHREADS, NBLOCKS>>>(clhs.get(), nc);
     derivates<<<NTHREADS, NBLOCKS>>>(crhs.get(), nc);
+
+    /* Split incoming signals into chunks we can use conveniently in parallel. */
 
     thrust::device_ptr<int> indices_of_negative_dys =
         thrust::device_malloc<int>(nc);
@@ -363,7 +368,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> pos_dys_rhs =
         thrust::device_malloc<ivalpt_t>(npositive_dys);
 
-    extract_ivalpts_by_dy<<<NBLOCKS, NTHREADS>>>(
+    ivalpt_extract_by_dy<<<NBLOCKS, NTHREADS>>>(
             clhs.get(), crhs.get(), nc,
             indices_of_negative_dys.get(),
             indices_of_positive_dys.get(),
@@ -372,17 +377,14 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
             pos_dys_lhs.get(),
             pos_dys_rhs.get());
 
-    /* negative_dys now holds all indices of negative dy's in clhs,
-     * and positive_dys all indices of positive dy's in clhs. */
+    /* neg_dys_lhs now holds all indices of negative dy's in clhs,
+     * and pos_dys_lhs all indices of positive dy's in clhs. Likewise for
+     * rhs (it still depends on dy's in clhs though!) */
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     naive_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
-    /* Do smart stuff here. A couple of things to think about:
-     * We can't just assume we're processing signals of segments with dy <= 0
-     * and dy > 0 separately, so we need some way to handle a signal
-     * made up of both rising and falling segments.
-     * We also need to ensure dy is correct before proceeding. */
+    /* ================== The sequential implementation starts here. ================== */
 
     /* Host arrays for sequential impl. */
     sigpt_t *hlhs = (sigpt_t *)malloc(nc * sizeof(sigpt_t));
