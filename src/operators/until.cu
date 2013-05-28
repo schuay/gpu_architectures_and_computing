@@ -189,20 +189,44 @@ mark_negative_dys(const sigpt_t *in,
 }
 
 __global__ static void
-extract_indices_by_dy(const sigpt_t *sig,
+extract_ivalpts_by_dy(const sigpt_t *lhs,
+                      const sigpt_t *rhs,
                       const int n,
                       const int *negative_indices,
                       const int *positive_indices,
-                      int *negatives,
-                      int *positives)
+                      ivalpt_t *neg_lhs,
+                      ivalpt_t *neg_rhs,
+                      ivalpt_t *pos_lhs,
+                      ivalpt_t *pos_rhs)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        if (sig[i].dy <= 0.f) {
-            negatives[negative_indices[i]] = i;
+        ivalpt_t l, r;
+        l.i = i;
+        r.i = i;
+
+        const sigpt_t l1 = lhs[i];
+        l.pts[0] = l1;
+        l.n = 1;
+
+        r.pts[0] = rhs[i];
+        r.n = 1;
+
+        if (i != n - 1) {
+            l.pts[1] = lhs[i + 1];
+            l.n = 2;
+
+            r.pts[1] = rhs[i + 1];
+            r.n = 2;
+        }
+
+        if (l1.dy <= 0.f) {
+            neg_lhs[negative_indices[i]] = l;
+            neg_rhs[negative_indices[i]] = r;
         } else {
-            positives[positive_indices[i]] = i;
+            pos_lhs[positive_indices[i]] = l;
+            pos_rhs[positive_indices[i]] = r;
         }
     }
 }
@@ -211,41 +235,36 @@ extract_indices_by_dy(const sigpt_t *sig,
  * That one will need to take an array of ivalpt_t as input as
  * well as output. */
 __global__ static void
-naive_evtl(const sigpt_t *sig,
-           const int nsig,
-           const int *indices,
-           const int nind,
+naive_evtl(const ivalpt_t *in,
+           const int n,
            ivalpt_t *out)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-    for (int i = tid; i < nind; i += blockDim.x * gridDim.x) {
-        const int ind = indices[i];
-        const sigpt_t s = sig[ind];
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        const ivalpt_t ival_in = in[i];
         
-        ivalpt_t ival;
-        ival.i = ind;
+        ivalpt_t ival_out = ival_in;
 
-        /* The last point always results in itself. */
+        /* EVTL applied to a point results in the point. */
 
-        if (ind == nsig - 1) {
-            ival.pts[0] = s;
-            ival.n = 1;
-            out[i] = ival;
+        if (ival_in.n == 1) {
+            out[i] = ival_out;
             continue;
         }
 
-        /* Otherwise, it's the maximum y of the current point and its successor. */
+        /* Otherwise, it's the maximum y of the current point and its successor. 
+         * TODO: Don't assume an interval of two points. */
 
-        const sigpt_t t = sig[ind + 1];
+        const sigpt_t s = ival_in.pts[0];
+        const sigpt_t t = ival_in.pts[1];
         sigpt_t result = (s.y > t.y) ? s : t;
         result.t = s.t;
 
-        ival.pts[0] = result;
-        ival.pts[1] = t;
-        ival.n = 2;
+        ival_out.pts[0] = result;
+        ival_out.n = 2;
 
-        out[i] = ival;
+        out[i] = ival_out;
     }
 }
 
@@ -291,28 +310,31 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
             indices_of_positive_dys);
 
     const int nnegative_dys = indices_of_negative_dys[nc - 1];
-    thrust::device_ptr<int> negative_dys =
-        thrust::device_malloc<int>(nnegative_dys);
+    thrust::device_ptr<ivalpt_t> neg_dys_lhs =
+        thrust::device_malloc<ivalpt_t>(nnegative_dys);
+    thrust::device_ptr<ivalpt_t> neg_dys_rhs =
+        thrust::device_malloc<ivalpt_t>(nnegative_dys);
 
     const int npositive_dys = indices_of_positive_dys[nc - 1];
-    thrust::device_ptr<int> positive_dys =
-        thrust::device_malloc<int>(npositive_dys);
+    thrust::device_ptr<ivalpt_t> pos_dys_lhs =
+        thrust::device_malloc<ivalpt_t>(npositive_dys);
+    thrust::device_ptr<ivalpt_t> pos_dys_rhs =
+        thrust::device_malloc<ivalpt_t>(npositive_dys);
 
-    extract_indices_by_dy<<<NBLOCKS, NTHREADS>>>(
-            clhs.get(), nc,
+    extract_ivalpts_by_dy<<<NBLOCKS, NTHREADS>>>(
+            clhs.get(), crhs.get(), nc,
             indices_of_negative_dys.get(),
             indices_of_positive_dys.get(),
-            negative_dys.get(),
-            positive_dys.get());
+            neg_dys_lhs.get(),
+            neg_dys_rhs.get(),
+            pos_dys_lhs.get(),
+            pos_dys_rhs.get());
 
     /* negative_dys now holds all indices of negative dy's in clhs,
      * and positive_dys all indices of positive dy's in clhs. */
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
-    naive_evtl<<<NBLOCKS, NTHREADS>>>(
-            clhs.get(), nc,
-            negative_dys.get(), nnegative_dys,
-            iz1.get());
+    naive_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
     /* Do smart stuff here. A couple of things to think about:
      * We can't just assume we're processing signals of segments with dy <= 0
