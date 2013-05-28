@@ -134,14 +134,14 @@ seq_bin(const sigpt_t *lhs,
     free(rhsi);
 }
 
-void
-seq_evtl(const sigpt_t *in,
-         const int nin,
-         sigpt_t **out,
-         int *nout)
+__host__ __device__ static void
+seq_evtl_internal(const sigpt_t *in,
+                  const int nin,
+                  sigpt_t *out,
+                  int *nout)
 {
-    const int nzs = 2 * nin;
-    sigpt_t *zs = (sigpt_t*) malloc(nzs * sizeof(sigpt_t));
+    const int nzs = *nout;
+    sigpt_t *zs = out;
 
     int i = nin - 1;
     int j = nzs - 1;
@@ -152,8 +152,6 @@ seq_evtl(const sigpt_t *in,
     j--;
 
     while (i >= 0) {
-        assert(j > 0);
-
         const sigpt_t prev = zs[j + 1];
         sigpt_t curr       = in[i];
         curr.y = CUDA_MAX(in[i].y, prev.y);
@@ -161,7 +159,6 @@ seq_evtl(const sigpt_t *in,
         if (in[i].y > prev.y && in[i + 1].y < prev.y) {
             float t;
             const int is_isec = intersect(&prev, &in[i], &prev, &in[i + 1], &t); 
-            assert(is_isec);
 
             zs[j] = (sigpt_t){ t, prev.y, 0 };
 
@@ -175,12 +172,27 @@ seq_evtl(const sigpt_t *in,
     }
 
     const int ndout = nzs - j - 1;
-    sigpt_t *dout = (sigpt_t*) malloc(ndout * sizeof(sigpt_t));
 
-    memcpy(dout, zs + j + 1, ndout * sizeof(sigpt_t));
+    for (i = 0; i < ndout; i++) {
+        out[i] = out[j + 1 + i];
+    }
 
-    *out = dout;
     *nout = ndout;
+}
+
+static void
+seq_evtl(const sigpt_t *in,
+         const int nin,
+         sigpt_t **out,
+         int *nout)
+{
+    int nzs = 2 * nin;
+    sigpt_t *zs = (sigpt_t*) malloc(nzs * sizeof(sigpt_t));
+
+    seq_evtl_internal(in, nin, zs, &nzs);
+
+    *out = zs;
+    *nout = nzs;
 }
 
 __global__ static void
