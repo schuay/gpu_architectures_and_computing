@@ -266,6 +266,36 @@ extract_indices_by_dy(const sigpt_t *sig,
     }
 }
 
+__global__ static void
+naive_evtl(const sigpt_t *sig,
+           const int nsig,
+           const int *indices,
+           const int nind,
+           sigpt_t *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < nind; i += blockDim.x * gridDim.x) {
+        const int ind = indices[i];
+        const sigpt_t s = sig[ind];
+
+        /* The last point always results in itself. */
+
+        if (ind == nsig - 1) {
+            out[i] = s;
+            continue;
+        }
+
+        /* Otherwise, it's the maximum y of the current point and its successor. */
+
+        const sigpt_t t = sig[ind + 1];
+        sigpt_t result = (s.y > t.y) ? s : t;
+        result.t = s.t;
+
+        out[i] = result;
+    }
+}
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -324,6 +354,12 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     /* negative_dys now holds all indices of negative dy's in clhs,
      * and positive_dys all indices of positive dy's in clhs. */
+
+    thrust::device_ptr<sigpt_t> iz1 = thrust::device_malloc<sigpt_t>(nnegative_dys);
+    naive_evtl<<<NBLOCKS, NTHREADS>>>(
+            clhs.get(), nc,
+            negative_dys.get(), nnegative_dys,
+            iz1.get());
 
     /* Do smart stuff here. A couple of things to think about:
      * We can't just assume we're processing signals of segments with dy <= 0
