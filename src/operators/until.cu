@@ -299,6 +299,19 @@ segment_evtl(const ivalpt_t *in,
     }
 }
 
+__global__ static void
+segment_and(const ivalpt_t *lhs,
+            const ivalpt_t *rhs,
+            const int n,
+            ivalpt_t *out)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        /* Place smart things here. */
+    }
+}
+
 
 /**
  * This implementation follows algorithm 2 presented in 
@@ -372,6 +385,10 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
+
+    thrust::device_ptr<ivalpt_t> iz2 = iz1;
+    segment_and<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get());
+
 
     /* ================== The sequential implementation starts here. ================== */
 
