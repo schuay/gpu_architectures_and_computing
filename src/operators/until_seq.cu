@@ -1,26 +1,25 @@
-#include "interpolate.hpp" /* TODO: Remove me. */
-
 __host__ __device__ static void
 seq_evtl_internal(const sigpt_t *in,
                   const int nin,
                   sigpt_t *out,
                   int *nout);
 
-typedef sigpt_t (*sig_binary)(const sigpt_t l, const sigpt_t r);
+__host__ __device__ static void
+seq_bin_internal(const sigpt_t *lhs,
+                 const int nlhs,
+                 const sigpt_t *rhs,
+                 const int nrhs,
+                 sigpt_t *out,
+                 int *nout,
+                 const sig_binary f);
 
-static sigpt_t
+__host__ __device__ static sigpt_t
 seq_bin_and(const sigpt_t l,
-            const sigpt_t r)
-{
-    return (l.y < r.y) ? l : r;
-}
+            const sigpt_t r);
 
-static sigpt_t
+__host__ __device__ static sigpt_t
 seq_bin_or(const sigpt_t l,
-           const sigpt_t r)
-{
-    return (l.y > r.y) ? l : r;
-}
+           const sigpt_t r);
 
 static void
 seq_bin(const sigpt_t *lhs,
@@ -31,63 +30,13 @@ seq_bin(const sigpt_t *lhs,
         int *nout,
         const sig_binary f)
 {
+    int ndout = 2 * (nlhs + nrhs);
     sigpt_t *dout = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
-    sigpt_t *lhsi = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
-    sigpt_t *rhsi = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
 
-    int i = 0;
-    int j = 0;
-    int k = 0;
-    int m = 0;
-
-    while (i < nlhs && j < nrhs) {
-        sigpt_t l = lhs[i];
-        sigpt_t r = rhs[j];
-
-        if (FLOAT_EQ(l.t, r.t)) {
-            i++;
-            j++;
-        } else if (l.t < r.t) {
-            assert(j != 0);
-            r = interpolate(&rhs[j - i], &r, l.t);
-            i++;
-        } else {
-            assert(i != 0);
-            l = interpolate(&lhs[i - 1], &l, r.t);
-            j++;
-        }
-
-        lhsi[m] = l;
-        rhsi[m] = r;
-        m++;
-    }
-
-    assert(i == nlhs && j == nrhs);
-    assert(m <= 2 * (nlhs + nrhs));
-
-    int l = 0;
-    for (k = 0; k < m - 1; k++) {
-        dout[l++] = f(lhsi[k], rhsi[k]);
-
-        float t;
-        if (intersect(&lhsi[k], &rhsi[k], &lhsi[k + 1], &rhsi[k + 1], &t)) {
-            sigpt_t a, b;
-            a = interpolate(&lhsi[k], &lhsi[k + 1], t);
-            b = interpolate(&rhsi[k], &rhsi[k + 1], t);
-
-            dout[l++] = f(a, b);
-        }
-    }
-
-    dout[l++] = f(lhsi[k], rhsi[k]);
-
-    assert(l <= 2 * (nlhs + nrhs));
+    seq_bin_internal(lhs, nlhs, rhs, nrhs, dout, &ndout, f);
 
     *out = dout;
-    *nout = l;
-
-    free(lhsi);
-    free(rhsi);
+    *nout = ndout;
 }
 
 static void

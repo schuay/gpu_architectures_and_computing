@@ -5,13 +5,16 @@
 #include <thrust/scan.h>
 
 #include "consolidate.hpp"
+#include "interpolate.hpp"
 #include "intersect.hpp"
 #include "globals.h"
 
-#include "until_seq.cu" /* TODO: Remove me. */
-
 /* TODO: Determine the actual max count of points in an interval. */
 #define IVALPT_COUNT (10)
+
+typedef sigpt_t (*sig_binary)(const sigpt_t l, const sigpt_t r);
+
+#include "until_seq.cu" /* TODO: Remove me. */
 
 typedef struct {
     int i;                      /* The original index this interval came from. */
@@ -97,6 +100,76 @@ seq_evtl_internal(const sigpt_t *in,
     }
 
     *nout = ndout;
+}
+
+__host__ __device__ static sigpt_t
+seq_bin_and(const sigpt_t l,
+            const sigpt_t r)
+{
+    return (l.y < r.y) ? l : r;
+}
+
+__host__ __device__ static sigpt_t
+seq_bin_or(const sigpt_t l,
+           const sigpt_t r)
+{
+    return (l.y > r.y) ? l : r;
+}
+
+__host__ __device__ static void
+seq_bin_internal(const sigpt_t *lhs,
+                 const int nlhs,
+                 const sigpt_t *rhs,
+                 const int nrhs,
+                 sigpt_t *out,
+                 int *nout,
+                 const sig_binary f)
+{
+    sigpt_t lhsi[IVALPT_COUNT];
+    sigpt_t rhsi[IVALPT_COUNT];
+
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    int m = 0;
+
+    while (i < nlhs && j < nrhs) {
+        sigpt_t l = lhs[i];
+        sigpt_t r = rhs[j];
+
+        if (FLOAT_EQ(l.t, r.t)) {
+            i++;
+            j++;
+        } else if (l.t < r.t) {
+            r = interpolate(&rhs[j - i], &r, l.t);
+            i++;
+        } else {
+            l = interpolate(&lhs[i - 1], &l, r.t);
+            j++;
+        }
+
+        lhsi[m] = l;
+        rhsi[m] = r;
+        m++;
+    }
+
+    int l = 0;
+    for (k = 0; k < m - 1; k++) {
+        out[l++] = f(lhsi[k], rhsi[k]);
+
+        float t;
+        if (intersect(&lhsi[k], &rhsi[k], &lhsi[k + 1], &rhsi[k + 1], &t)) {
+            sigpt_t a, b;
+            a = interpolate(&lhsi[k], &lhsi[k + 1], t);
+            b = interpolate(&rhsi[k], &rhsi[k + 1], t);
+
+            out[l++] = f(a, b);
+        }
+    }
+
+    out[l++] = f(lhsi[k], rhsi[k]);
+
+    *nout = l;
 }
 
 __global__ static void
