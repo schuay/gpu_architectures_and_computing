@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <float.h>
+
 __host__ __device__ static void
 seq_evtl_internal(const sigpt_t *in,
                   const int nin,

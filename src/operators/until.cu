@@ -1,7 +1,6 @@
 #include "until.hpp"
 
-#include <assert.h>
-#include <float.h>
+#include <stdio.h>
 #include <thrust/scan.h>
 
 #include "consolidate.hpp"
@@ -22,7 +21,6 @@ typedef struct {
     int n;                      /* The count of points in this interval. */
 } ivalpt_t;
 
-#include <stdio.h> /* TODO: Remove me. */
 
 static void
 ivalpt_print(const char *name,
