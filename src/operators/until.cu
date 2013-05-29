@@ -306,6 +306,20 @@ segment_and(const ivalpt_t *lhs,
     }
 }
 
+struct ivalpt_constantize : public thrust::unary_function<ivalpt_t, ivalpt_t>
+{
+    __device__ ivalpt_t
+    operator()(const ivalpt_t &in) const
+    {
+        ivalpt_t out = in;
+
+        for (int i = 1; i < out.n; i++) {
+            out.pts[i].y = out.pts[0].y;
+        }
+
+        return out;
+    }
+};
 
 /**
  * This implementation follows algorithm 2 presented in 
@@ -375,7 +389,19 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     /* neg_dys_lhs now holds all indices of negative dy's in clhs,
      * and pos_dys_lhs all indices of positive dy's in clhs. Likewise for
-     * rhs (it still depends on dy's in clhs though!) */
+     * rhs (it still depends on dy's in clhs though!)
+     *
+     * We still require the segment-wise constant signal of lhs. */
+
+    thrust::device_ptr<ivalpt_t> neg_dys_lhs_c =
+        thrust::device_malloc<ivalpt_t>(nnegative_dys);
+    thrust::device_ptr<ivalpt_t> pos_dys_lhs_c =
+        thrust::device_malloc<ivalpt_t>(npositive_dys);
+
+    thrust::transform(neg_dys_lhs, neg_dys_lhs + nnegative_dys, neg_dys_lhs_c, ivalpt_constantize());
+    thrust::transform(pos_dys_lhs, pos_dys_lhs + npositive_dys, pos_dys_lhs_c, ivalpt_constantize());
+
+    /* We begin with the if branch: */
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
