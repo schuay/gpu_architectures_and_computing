@@ -406,7 +406,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
-    thrust::device_ptr<ivalpt_t> iz2 = iz1;
+    thrust::device_ptr<ivalpt_t> iz2 = iz1; /* If this is ever changed, don't forget to free. */
     segment_and<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get());
 
     /* On to the else branch: */
@@ -421,6 +421,16 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     seq_until(clhs, crhs, nc, out, nout);
 
+    thrust::device_free(indices_of_negative_dys);
+    thrust::device_free(indices_of_positive_dys);
+    thrust::device_free(neg_dys_lhs);
+    thrust::device_free(neg_dys_rhs);
+    thrust::device_free(pos_dys_lhs);
+    thrust::device_free(pos_dys_rhs);
+    thrust::device_free(neg_dys_lhs_c);
+    thrust::device_free(pos_dys_lhs_c);
+    thrust::device_free(iz2);
+    thrust::device_free(ez2);
     thrust::device_free(clhs);
     thrust::device_free(crhs);
 }
