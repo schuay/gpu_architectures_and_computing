@@ -409,6 +409,13 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> iz2 = iz1;
     segment_and<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get());
 
+    /* On to the else branch: */
+
+    thrust::device_ptr<ivalpt_t> ez1 = thrust::device_malloc<ivalpt_t>(npositive_dys);
+    segment_and<<<NBLOCKS, NTHREADS>>>(pos_dys_rhs.get(), pos_dys_lhs_c.get(), npositive_dys, ez1.get());
+
+    thrust::device_ptr<ivalpt_t> ez2 = ez1; /* If this is ever changed, don't forget to free. */
+    segment_evtl<<<NBLOCKS, NTHREADS>>>(ez1.get(), npositive_dys, ez2.get());
 
     /* ================== The sequential implementation starts here. ================== */
 
