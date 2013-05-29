@@ -11,6 +11,11 @@
 /* TODO: Determine the actual max count of points in an interval. */
 #define IVALPT_COUNT (10)
 
+enum {
+    OP_AND,
+    OP_OR
+};
+
 typedef sigpt_t (*sig_binary)(const sigpt_t l, const sigpt_t r);
 
 #include "until_seq.cu" /* TODO: Remove me. */
@@ -114,6 +119,10 @@ seq_bin_or(const sigpt_t l,
     return (l.y > r.y) ? l : r;
 }
 
+/* Note: The actual binary operator used to be a function pointer,
+ * which makes much more sense than using this flag. However,
+ * I couldn't figure out how to use them with CUDA. Additionally,
+ * function pointers would require switching to at least sm_20. */
 __host__ __device__ static void
 seq_bin_internal(const sigpt_t *lhs,
                  const int nlhs,
@@ -121,7 +130,7 @@ seq_bin_internal(const sigpt_t *lhs,
                  const int nrhs,
                  sigpt_t *out,
                  int *nout,
-                 const sig_binary f)
+                 const int op)
 {
     sigpt_t lhsi[IVALPT_COUNT];
     sigpt_t rhsi[IVALPT_COUNT];
@@ -153,7 +162,8 @@ seq_bin_internal(const sigpt_t *lhs,
 
     int l = 0;
     for (k = 0; k < m - 1; k++) {
-        out[l++] = f(lhsi[k], rhsi[k]);
+        out[l++] = (op == OP_AND) ? seq_bin_and(lhsi[k], rhsi[k])
+                                  : seq_bin_or (lhsi[k], rhsi[k]);
 
         float t;
         if (intersect(&lhsi[k], &rhsi[k], &lhsi[k + 1], &rhsi[k + 1], &t)) {
@@ -161,11 +171,13 @@ seq_bin_internal(const sigpt_t *lhs,
             a = interpolate(&lhsi[k], &lhsi[k + 1], t);
             b = interpolate(&rhsi[k], &rhsi[k + 1], t);
 
-            out[l++] = f(a, b);
+            out[l++] = (op == OP_AND) ? seq_bin_and(a, b)
+                                      : seq_bin_or (a, b);
         }
     }
 
-    out[l++] = f(lhsi[k], rhsi[k]);
+    out[l++] = (op == OP_AND) ? seq_bin_and(lhsi[k], rhsi[k])
+                              : seq_bin_or (lhsi[k], rhsi[k]);
 
     *nout = l;
 }
@@ -280,7 +292,17 @@ segment_and(const ivalpt_t *lhs,
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        /* Place smart things here. */
+        const ivalpt_t ival_l = lhs[i];
+        const ivalpt_t ival_r = rhs[i];
+
+        ivalpt_t ival_out;
+        ival_out.i = ival_l.i;
+        ival_out.n = IVALPT_COUNT;
+
+        seq_bin_internal(ival_l.pts, ival_l.n, ival_r.pts, ival_r.n,
+                ival_out.pts, &ival_out.n, OP_AND);
+
+        out[i] = ival_out;
     }
 }
 

@@ -14,7 +14,7 @@ seq_bin_internal(const sigpt_t *lhs,
                  const int nrhs,
                  sigpt_t *out,
                  int *nout,
-                 const sig_binary f);
+                 const int op);
 
 __host__ __device__ static sigpt_t
 seq_bin_and(const sigpt_t l,
@@ -31,12 +31,12 @@ seq_bin(const sigpt_t *lhs,
         const int nrhs,
         sigpt_t **out,
         int *nout,
-        const sig_binary f)
+        const int op)
 {
     int ndout = 2 * (nlhs + nrhs);
     sigpt_t *dout = (sigpt_t *)malloc(2 * (nlhs + nrhs) * sizeof(sigpt_t));
 
-    seq_bin_internal(lhs, nlhs, rhs, nrhs, dout, &ndout, f);
+    seq_bin_internal(lhs, nlhs, rhs, nrhs, dout, &ndout, op);
 
     *out = dout;
     *nout = ndout;
@@ -101,7 +101,7 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
             int nz1;
             seq_evtl(hrhs + i, 2, &z1, &nz1);
 
-            seq_bin(z1, nz1, hlhs + i, 2, &z2, &nz2, seq_bin_and);
+            seq_bin(z1, nz1, hlhs + i, 2, &z2, &nz2, OP_AND);
 
             sigpt_t z3lhs[2];
             z3lhs[0] = hlhs[i + 1];
@@ -109,7 +109,7 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
             z3lhs[1] = hlhs[i + 1];
             z3lhs[1].t = hlhs[i + 1].t;
 
-            seq_bin(z3lhs, 2, z0, 2, &z3, &nz3, seq_bin_and);
+            seq_bin(z3lhs, 2, z0, 2, &z3, &nz3, OP_AND);
 
             free(z1);
         } else {
@@ -121,17 +121,17 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
 
             sigpt_t *z1;
             int nz1;
-            seq_bin(hrhs + i, 2, z1rhs, 2, &z1, &nz1, seq_bin_and);
+            seq_bin(hrhs + i, 2, z1rhs, 2, &z1, &nz1, OP_AND);
 
             seq_evtl(z1, nz1, &z2, &nz2);
-            seq_bin(hlhs + i, 2, z0, 2, &z3, &nz3, seq_bin_and);
+            seq_bin(hlhs + i, 2, z0, 2, &z3, &nz3, OP_AND);
 
             free(z1);
         }
 
         sigpt_t *z4;
         int nz4;
-        seq_bin(z2, nz2, z3, nz3, &z4, &nz4, seq_bin_or);
+        seq_bin(z2, nz2, z3, nz3, &z4, &nz4, OP_OR);
 
         /* Note: The last point in result is skipped sine the interval
          * is half-open! */
