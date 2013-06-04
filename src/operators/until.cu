@@ -497,13 +497,17 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
             indices_of_positive_dys + nc,
             indices_of_positive_dys);
 
-    const int nnegative_dys = indices_of_negative_dys[nc - 1];
+    const sigpt_t last = clhs[nc - 1];
+    const int last_is_falling = (last.dy <= 0);
+    const int last_is_rising = !last_is_falling;
+
+    const int nnegative_dys = indices_of_negative_dys[nc - 1] + last_is_falling;
     thrust::device_ptr<ivalpt_t> neg_dys_lhs =
         thrust::device_malloc<ivalpt_t>(nnegative_dys);
     thrust::device_ptr<ivalpt_t> neg_dys_rhs =
         thrust::device_malloc<ivalpt_t>(nnegative_dys);
 
-    const int npositive_dys = indices_of_positive_dys[nc - 1];
+    const int npositive_dys = indices_of_positive_dys[nc - 1] + last_is_rising;
     thrust::device_ptr<ivalpt_t> pos_dys_lhs =
         thrust::device_malloc<ivalpt_t>(npositive_dys);
     thrust::device_ptr<ivalpt_t> pos_dys_rhs =
