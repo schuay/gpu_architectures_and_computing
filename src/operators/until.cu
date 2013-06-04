@@ -348,10 +348,11 @@ segment_evtl(const ivalpt_t *in,
 }
 
 __global__ static void
-segment_and(const ivalpt_t *lhs,
+segment_bin(const ivalpt_t *lhs,
             const ivalpt_t *rhs,
             const int n,
-            ivalpt_t *out)
+            ivalpt_t *out,
+            const int op)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -364,7 +365,7 @@ segment_and(const ivalpt_t *lhs,
         ival_out.n = IVALPT_COUNT;
 
         seq_bin_internal(ival_l.pts, ival_l.n, ival_r.pts, ival_r.n,
-                ival_out.pts, &ival_out.n, OP_AND);
+                ival_out.pts, &ival_out.n, op);
 
         out[i] = ival_out;
     }
@@ -502,12 +503,12 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
     thrust::device_ptr<ivalpt_t> iz2 = iz1; /* If this is ever changed, don't forget to free. */
-    segment_and<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get());
+    segment_bin<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get(), OP_AND);
 
     /* On to the else branch: */
 
     thrust::device_ptr<ivalpt_t> ez1 = thrust::device_malloc<ivalpt_t>(npositive_dys);
-    segment_and<<<NBLOCKS, NTHREADS>>>(pos_dys_rhs.get(), pos_dys_lhs_c.get(), npositive_dys, ez1.get());
+    segment_bin<<<NBLOCKS, NTHREADS>>>(pos_dys_rhs.get(), pos_dys_lhs_c.get(), npositive_dys, ez1.get(), OP_AND);
 
     thrust::device_ptr<ivalpt_t> ez2 = ez1; /* If this is ever changed, don't forget to free. */
     segment_evtl<<<NBLOCKS, NTHREADS>>>(ez1.get(), npositive_dys, ez2.get());
@@ -530,7 +531,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     /* z3 and the interval-wise result are common over both branches. */
 
     thrust::device_ptr<ivalpt_t> z3 = thrust::device_malloc<ivalpt_t>(nc);
-    segment_and<<<NBLOCKS, NTHREADS>>>(z4.get(), z0.get(), nc, z3.get());
+    segment_bin<<<NBLOCKS, NTHREADS>>>(z4.get(), z0.get(), nc, z3.get(), OP_AND);
 
     thrust::device_free(z4);
     thrust::device_free(z3);
