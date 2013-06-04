@@ -51,15 +51,9 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
           int *nout)
 {
     /* Host arrays for sequential impl. */
-    sigpt_t *hlhs = (sigpt_t *)malloc(n * sizeof(sigpt_t));
-    sigpt_t *hrhs = (sigpt_t *)malloc(n * sizeof(sigpt_t));
-    ivalpt_t *hz2 = (ivalpt_t *)malloc(n * sizeof(ivalpt_t));
-
-    for (int i = 0; i < n; i++) {
-        hlhs[i] = clhs[i];
-        hrhs[i] = crhs[i];
-        hz2[i] = z2[i];
-    }
+    thrust::host_vector<sigpt_t> hlhs(clhs, clhs + n);
+    thrust::host_vector<sigpt_t> hrhs(crhs, crhs + n);
+    thrust::host_vector<ivalpt_t> hz2(z2, z2 + n);
 
     /* The result host array. 10 is some arbitrary constant to ensure we have enough space. */
     const int nres = 10 * n;
@@ -91,7 +85,7 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
 
             seq_bin(z3lhs, 2, z0, 2, &z3, &nz3, OP_AND);
         } else {
-            seq_bin(hlhs + i, 2, z0, 2, &z3, &nz3, OP_AND);
+            seq_bin(&hlhs[i], 2, z0, 2, &z3, &nz3, OP_AND);
         }
 
         sigpt_t *z4;
@@ -123,8 +117,5 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
     *out = dout;
     *nout = ndout;
 
-    free(hlhs);
-    free(hrhs);
-    free(hz2);
     free(result);
 }
