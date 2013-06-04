@@ -43,23 +43,9 @@ seq_bin(const sigpt_t *lhs,
 }
 
 static void
-seq_evtl(const sigpt_t *in,
-         const int nin,
-         sigpt_t **out,
-         int *nout)
-{
-    int nzs = 2 * nin;
-    sigpt_t *zs = (sigpt_t*) malloc(nzs * sizeof(sigpt_t));
-
-    seq_evtl_internal(in, nin, zs, &nzs);
-
-    *out = zs;
-    *nout = nzs;
-}
-
-static void
 seq_until(const thrust::device_ptr<sigpt_t> &clhs,
           const thrust::device_ptr<sigpt_t> &crhs,
+          const thrust::device_ptr<ivalpt_t> &z2,
           const int n,
           thrust::device_ptr<sigpt_t> *out,
           int *nout)
@@ -67,10 +53,12 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
     /* Host arrays for sequential impl. */
     sigpt_t *hlhs = (sigpt_t *)malloc(n * sizeof(sigpt_t));
     sigpt_t *hrhs = (sigpt_t *)malloc(n * sizeof(sigpt_t));
+    ivalpt_t *hz2 = (ivalpt_t *)malloc(n * sizeof(ivalpt_t));
 
     for (int i = 0; i < n; i++) {
         hlhs[i] = clhs[i];
         hrhs[i] = crhs[i];
+        hz2[i] = z2[i];
     }
 
     /* The result host array. 10 is some arbitrary constant to ensure we have enough space. */
@@ -91,18 +79,10 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
         z0[1].y = z;
         z0[1].t = hlhs[i + 1].t;
 
-        sigpt_t *z2;
-        int nz2;
         sigpt_t *z3;
         int nz3;
 
         if (hlhs[i].dy <= 0) {
-            sigpt_t *z1;
-            int nz1;
-            seq_evtl(hrhs + i, 2, &z1, &nz1);
-
-            seq_bin(z1, nz1, hlhs + i, 2, &z2, &nz2, OP_AND);
-
             sigpt_t z3lhs[2];
             z3lhs[0] = hlhs[i + 1];
             z3lhs[0].t = hlhs[i].t;
@@ -110,28 +90,13 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
             z3lhs[1].t = hlhs[i + 1].t;
 
             seq_bin(z3lhs, 2, z0, 2, &z3, &nz3, OP_AND);
-
-            free(z1);
         } else {
-            sigpt_t z1rhs[2];
-            z1rhs[0] = hlhs[i];
-            z1rhs[0].t = hrhs[i].t;
-            z1rhs[1] = hlhs[i];
-            z1rhs[1].t = hrhs[i + 1].t;
-
-            sigpt_t *z1;
-            int nz1;
-            seq_bin(hrhs + i, 2, z1rhs, 2, &z1, &nz1, OP_AND);
-
-            seq_evtl(z1, nz1, &z2, &nz2);
             seq_bin(hlhs + i, 2, z0, 2, &z3, &nz3, OP_AND);
-
-            free(z1);
         }
 
         sigpt_t *z4;
         int nz4;
-        seq_bin(z2, nz2, z3, nz3, &z4, &nz4, OP_OR);
+        seq_bin(hz2[i].pts, hz2[i].n, z3, nz3, &z4, &nz4, OP_OR);
 
         /* Note: The last point in result is skipped since the interval
          * is half-open! */
@@ -143,7 +108,6 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
         z = z4[0].y;
         i--;
 
-        free(z2);
         free(z3);
         free(z4);
     }
@@ -161,5 +125,6 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
 
     free(hlhs);
     free(hrhs);
+    free(hz2);
     free(result);
 }

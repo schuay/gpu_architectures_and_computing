@@ -19,13 +19,13 @@ enum {
 
 typedef sigpt_t (*sig_binary)(const sigpt_t l, const sigpt_t r);
 
-#include "until_seq.cu" /* TODO: Remove me. */
-
 typedef struct {
     int i;                      /* The original index this interval came from. */
     sigpt_t pts[IVALPT_COUNT];  /* The points contained in this interval. */
     int n;                      /* The count of points in this interval. */
 } ivalpt_t;
+
+#include "until_seq.cu" /* TODO: Remove me. */
 
 
 static void
@@ -434,7 +434,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     /* ================== The sequential implementation starts here. ================== */
 
-    seq_until(clhs, crhs, nc, out, nout);
+    seq_until(clhs, crhs, z2, nc, out, nout);
 
     thrust::device_free(z2);
     thrust::device_free(indices_of_negative_dys);
