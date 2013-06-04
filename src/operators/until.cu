@@ -370,6 +370,37 @@ segment_and(const ivalpt_t *lhs,
     }
 }
 
+__global__ static void
+extract_z4(const sigpt_t *y,
+           const int n,
+           ivalpt_t *z4)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        const sigpt_t y0 = y[i];
+
+        ivalpt_t ival;
+        ival.i = i;
+        
+        if (i == n - 1) {
+            ival.n = 1;
+            ival.pts[0] = y0;
+            z4[i] = ival;
+            continue;
+        }
+
+        const sigpt_t y1 = y[i + 1];
+
+        ival.n = 2;
+        ival.pts[1] = y1;
+        ival.pts[0].t = y0.t;
+        ival.pts[0].y = (y0.dy <= 0) ? y1.y : y0.y;
+
+        z4[i] = ival;
+    }
+}
+
 struct ivalpt_constantize : public thrust::unary_function<ivalpt_t, ivalpt_t>
 {
     __device__ ivalpt_t
@@ -486,11 +517,17 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> z2 = thrust::device_malloc<ivalpt_t>(nc);
     thrust::merge(iz2, iz2 + nnegative_dys, ez2, ez2 + npositive_dys, z2, ivalpt_less());
 
-    /* ================== The sequential implementation starts here. ================== */
+    /* *Sequentially* compute z0. */
 
     thrust::device_ptr<ivalpt_t> z0 = thrust::device_malloc<ivalpt_t>(nc);
     seq_z0(clhs, crhs, z2, nc, z0);
 
+    /* Extract z4 (the LHS input to the z3 steps). */
+
+    thrust::device_ptr<ivalpt_t> z4 = thrust::device_malloc<ivalpt_t>(nc);
+    extract_z4<<<NBLOCKS, NTHREADS>>>(clhs.get(), nc, z4.get());
+
+    thrust::device_free(z4);
     thrust::device_free(z2);
     thrust::device_free(z0);
     thrust::device_free(indices_of_negative_dys);
