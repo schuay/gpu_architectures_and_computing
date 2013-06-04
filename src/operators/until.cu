@@ -1,6 +1,7 @@
 #include "until.hpp"
 
 #include <stdio.h>
+#include <thrust/merge.h>
 #include <thrust/scan.h>
 
 #include "consolidate.hpp"
@@ -42,6 +43,15 @@ ivalpt_print(const char *name,
         }
     }
 }
+
+struct ivalpt_less : public thrust::binary_function<ivalpt_t, ivalpt_t, bool>
+{
+    __device__ bool
+    operator()(const ivalpt_t &lhs, const ivalpt_t &rhs) const
+    {
+        return lhs.i < rhs.i;
+    }
+};
 
 __global__ static void
 derivates(sigpt_t *sig,
@@ -417,10 +427,16 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> ez2 = ez1; /* If this is ever changed, don't forget to free. */
     segment_evtl<<<NBLOCKS, NTHREADS>>>(ez1.get(), npositive_dys, ez2.get());
 
+    /* Merge z2 back into one sequence for sequential computation of z0. */
+
+    thrust::device_ptr<ivalpt_t> z2 = thrust::device_malloc<ivalpt_t>(nc);
+    thrust::merge(iz2, iz2 + nnegative_dys, ez2, ez2 + npositive_dys, z2, ivalpt_less());
+
     /* ================== The sequential implementation starts here. ================== */
 
     seq_until(clhs, crhs, nc, out, nout);
 
+    thrust::device_free(z2);
     thrust::device_free(indices_of_negative_dys);
     thrust::device_free(indices_of_positive_dys);
     thrust::device_free(neg_dys_lhs);
