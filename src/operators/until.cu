@@ -527,7 +527,13 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> z4 = thrust::device_malloc<ivalpt_t>(nc);
     extract_z4<<<NBLOCKS, NTHREADS>>>(clhs.get(), nc, z4.get());
 
+    /* z3 and the interval-wise result are common over both branches. */
+
+    thrust::device_ptr<ivalpt_t> z3 = thrust::device_malloc<ivalpt_t>(nc);
+    segment_and<<<NBLOCKS, NTHREADS>>>(z4.get(), z0.get(), nc, z3.get());
+
     thrust::device_free(z4);
+    thrust::device_free(z3);
     thrust::device_free(z2);
     thrust::device_free(z0);
     thrust::device_free(indices_of_negative_dys);
