@@ -19,8 +19,8 @@ bevtl_rmax(const sigpt_t *y,
 void
 stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
           const int nin,
-          const int s,
-          const int t,
+          const float s,
+          const float t,
           thrust::device_ptr<sigpt_t> *out,
           int *nout)
 {

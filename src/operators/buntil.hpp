@@ -12,8 +12,8 @@ stl_buntil(const thrust::device_ptr<sigpt_t> &lhs,
            const int nlhs,
            const thrust::device_ptr<sigpt_t> &rhs,
            const int nrhs,
-           const int s,
-           const int t,
+           const float s,
+           const float t,
            thrust::device_ptr<sigpt_t> *out,
            int *nout);
 
