@@ -417,6 +417,41 @@ struct ivalpt_constantize : public thrust::unary_function<ivalpt_t, ivalpt_t>
     }
 };
 
+struct ivalpt_n_minus_one : public thrust::unary_function<ivalpt_t, int>
+{
+    __device__ int
+    operator()(const ivalpt_t &in) const
+    {
+        const int n = in.n - 1;
+        return (n > 0) ? n : 1;
+    }
+};
+
+/**
+ * If you know Haskell's concat, this does pretty much the same thing:
+ * It takes a list of lists, and concatenates them into one single list.
+ * The only difference is that the last point for each interval is omitted
+ * (except in the very last interval).
+ */
+__global__ static void
+ivalpt_concat(const ivalpt_t *ivals,
+              const int *ixs,
+              const int n,
+              sigpt_t *sigs)
+{
+    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
+        const ivalpt_t ival = ivals[i];
+        const int ix = ixs[i];
+
+        const int the_end = CUDA_MAX(1, ival.n - 1);
+        for (int j = 0; j < the_end; j++) {
+            sigs[ix + j] = ival.pts[j];
+        }
+    }
+}
+
 /**
  * This implementation follows algorithm 2 presented in 
  * Efficient Robust Monitoring for STL.
@@ -536,6 +571,22 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> iout = thrust::device_malloc<ivalpt_t>(nc);
     segment_bin<<<NBLOCKS, NTHREADS>>>(z2.get(), z3.get(), nc, iout.get(), OP_OR);
 
+    /* Finally, merge our interval points back into an sigpt_t sequence. */
+
+    thrust::device_ptr<int> concat_indices = thrust::device_malloc<int>(nc);
+    thrust::transform(iout, iout + nc, concat_indices, ivalpt_n_minus_one());
+    thrust::exclusive_scan(concat_indices, concat_indices + nc, concat_indices);
+
+    const ivalpt_t the_end = iout[nc - 1];
+    const int ndout = concat_indices[nc - 1] + the_end.n;
+    thrust::device_ptr<sigpt_t> dout = thrust::device_malloc<sigpt_t>(ndout);
+
+    ivalpt_concat<<<NBLOCKS, NTHREADS>>>(iout.get(), concat_indices.get(), nc, dout.get());
+
+    *out = dout;
+    *nout = ndout;
+
+    thrust::device_free(concat_indices);
     thrust::device_free(iout);
     thrust::device_free(z4);
     thrust::device_free(z3);
