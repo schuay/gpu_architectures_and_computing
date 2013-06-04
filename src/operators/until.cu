@@ -197,75 +197,51 @@ seq_z0(const thrust::device_ptr<sigpt_t> &clhs,
        const thrust::device_ptr<sigpt_t> &crhs,
        const thrust::device_ptr<ivalpt_t> &z2,
        const int n,
-       thrust::device_ptr<sigpt_t> *out,
-       int *nout)
+       thrust::device_ptr<ivalpt_t> out)
 {
     /* Host arrays for sequential impl. */
     thrust::host_vector<sigpt_t> hlhs(clhs, clhs + n);
     thrust::host_vector<sigpt_t> hrhs(crhs, crhs + n);
     thrust::host_vector<ivalpt_t> hz2(z2, z2 + n);
 
-    /* The result host array. 10 is some arbitrary constant to ensure we have enough space. */
-    const int nres = 10 * n;
-    sigpt_t *result = (sigpt_t *)malloc(nres * sizeof(sigpt_t));
-
-    int i = n - 2;
-    int j = nres - 2;
-    float z = -INFINITY;
+    sigpt_t *result = (sigpt_t *)malloc(n * sizeof(sigpt_t));
 
     /* The final point is simply an AND. */
-    result[nres - 1] = seq_bin_and(hlhs[n - 1], hrhs[n - 1]);
+    result[n - 1] = seq_bin_and(hlhs[n - 1], hrhs[n - 1]);
 
-    while (i >= 0) {
-        sigpt_t z0[2];
-        z0[0].y = z;
-        z0[0].t = hlhs[i].t;
-        z0[1].y = z;
-        z0[1].t = hlhs[i + 1].t;
+    sigpt_t z0 = (sigpt_t){ hlhs[n - 1].t, -INFINITY, 0.f };
 
-        sigpt_t *z3;
-        int nz3;
+    for (int i = n - 2; i >= 0; i--) {
+        sigpt_t z3;
 
         if (hlhs[i].dy <= 0) {
-            sigpt_t z3lhs[2];
-            z3lhs[0] = hlhs[i + 1];
-            z3lhs[0].t = hlhs[i].t;
-            z3lhs[1] = hlhs[i + 1];
-            z3lhs[1].t = hlhs[i + 1].t;
-
-            seq_bin(z3lhs, 2, z0, 2, &z3, &nz3, OP_AND);
+            const sigpt_t z3lhs = (sigpt_t){ hlhs[i].t, hlhs[i + 1].y, 0.f };
+            z3 = seq_bin_and(z3lhs, z0);
         } else {
-            seq_bin(&hlhs[i], 2, z0, 2, &z3, &nz3, OP_AND);
+            z3 = seq_bin_and(hlhs[i], z0);
         }
 
-        sigpt_t *z4;
-        int nz4;
-        seq_bin(hz2[i].pts, hz2[i].n, z3, nz3, &z4, &nz4, OP_OR);
-
-        /* Note: The last point in result is skipped since the interval
-         * is half-open! */
-        for (int k = nz4 - 1 - 1; k >= 0; k--) {
-            result[j] = z4[k];
-            j--;
-        }
-        
-        z = z4[0].y;
-        i--;
-
-        free(z3);
-        free(z4);
+        result[i] = z0;
+        z0 = seq_bin_or(hz2[i].pts[0], z3);
     }
 
     /* Transfer sequential results back to device memory. */
-    const int ndout = nres - j - 1;
-    thrust::device_ptr<sigpt_t> dout = thrust::device_malloc<sigpt_t>(ndout);
+    ivalpt_t ival;
 
-    for (int i = 0; i < ndout; i++) {
-        dout[ndout - i - 1] = result[nres - i - 1];
+    for (int i = 0; i < n - 1; i++) {
+        ival.i = i;
+        ival.n = 2;
+        ival.pts[0] = (sigpt_t){ hlhs[i].t, result[i].y, 0.f };
+        ival.pts[1] = (sigpt_t){ hlhs[i + 1].t, result[i].y, 0.f };
+
+        out[i] = ival;
     }
 
-    *out = dout;
-    *nout = ndout;
+    ival.i = n - 1;
+    ival.n = 1;
+    ival.pts[0] = (sigpt_t){ hlhs[n - 1].t, -INFINITY, 0.f };
+
+    out[n - 1] = ival;
 
     free(result);
 }
@@ -512,9 +488,11 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     /* ================== The sequential implementation starts here. ================== */
 
-    seq_z0(clhs, crhs, z2, nc, out, nout);
+    thrust::device_ptr<ivalpt_t> z0 = thrust::device_malloc<ivalpt_t>(nc);
+    seq_z0(clhs, crhs, z2, nc, z0);
 
     thrust::device_free(z2);
+    thrust::device_free(z0);
     thrust::device_free(indices_of_negative_dys);
     thrust::device_free(indices_of_positive_dys);
     thrust::device_free(neg_dys_lhs);
