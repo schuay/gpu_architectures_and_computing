@@ -199,17 +199,21 @@ seq_z0(const thrust::device_ptr<sigpt_t> &clhs,
        const int n,
        thrust::device_ptr<ivalpt_t> out)
 {
+    assert(n > 0);
+
     /* Host arrays for sequential impl. */
     thrust::host_vector<sigpt_t> hlhs(clhs, clhs + n);
     thrust::host_vector<sigpt_t> hrhs(crhs, crhs + n);
     thrust::host_vector<ivalpt_t> hz2(z2, z2 + n);
 
-    sigpt_t *result = (sigpt_t *)malloc(n * sizeof(sigpt_t));
-
-    /* The final point is simply an AND. */
-    result[n - 1] = seq_bin_and(hlhs[n - 1], hrhs[n - 1]);
-
+    /* The final point is simply FALSE. */
     sigpt_t z0 = (sigpt_t){ hlhs[n - 1].t, -INFINITY, 0.f };
+
+    ivalpt_t ival;
+    ival.i = n - 1;
+    ival.n = 1;
+    ival.pts[0] = (sigpt_t){ hlhs[n - 1].t, z0.y, 0.f };
+    out[n - 1] = ival;
 
     for (int i = n - 2; i >= 0; i--) {
         sigpt_t z3;
@@ -221,29 +225,15 @@ seq_z0(const thrust::device_ptr<sigpt_t> &clhs,
             z3 = seq_bin_and(hlhs[i], z0);
         }
 
-        result[i] = z0;
-        z0 = seq_bin_or(hz2[i].pts[0], z3);
-    }
-
-    /* Transfer sequential results back to device memory. */
-    ivalpt_t ival;
-
-    for (int i = 0; i < n - 1; i++) {
+        /* Transfer sequential results back to device memory. */
         ival.i = i;
         ival.n = 2;
-        ival.pts[0] = (sigpt_t){ hlhs[i].t, result[i].y, 0.f };
-        ival.pts[1] = (sigpt_t){ hlhs[i + 1].t, result[i].y, 0.f };
-
+        ival.pts[0] = (sigpt_t){ hlhs[i].t, z0.y, 0.f };
+        ival.pts[1] = (sigpt_t){ hlhs[i + 1].t, z0.y, 0.f };
         out[i] = ival;
+
+        z0 = seq_bin_or(hz2[i].pts[0], z3);
     }
-
-    ival.i = n - 1;
-    ival.n = 1;
-    ival.pts[0] = (sigpt_t){ hlhs[n - 1].t, -INFINITY, 0.f };
-
-    out[n - 1] = ival;
-
-    free(result);
 }
 
 __global__ static void
