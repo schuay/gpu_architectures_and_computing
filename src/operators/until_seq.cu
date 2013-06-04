@@ -133,7 +133,7 @@ seq_until(const thrust::device_ptr<sigpt_t> &clhs,
         int nz4;
         seq_bin(z2, nz2, z3, nz3, &z4, &nz4, OP_OR);
 
-        /* Note: The last point in result is skipped sine the interval
+        /* Note: The last point in result is skipped since the interval
          * is half-open! */
         for (int k = nz4 - 1 - 1; k >= 0; k--) {
             result[j] = z4[k];
