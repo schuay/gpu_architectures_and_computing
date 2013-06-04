@@ -533,6 +533,10 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> z3 = thrust::device_malloc<ivalpt_t>(nc);
     segment_bin<<<NBLOCKS, NTHREADS>>>(z4.get(), z0.get(), nc, z3.get(), OP_AND);
 
+    thrust::device_ptr<ivalpt_t> iout = thrust::device_malloc<ivalpt_t>(nc);
+    segment_bin<<<NBLOCKS, NTHREADS>>>(z2.get(), z3.get(), nc, iout.get(), OP_OR);
+
+    thrust::device_free(iout);
     thrust::device_free(z4);
     thrust::device_free(z3);
     thrust::device_free(z2);
