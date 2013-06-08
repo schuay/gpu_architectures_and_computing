@@ -57,8 +57,8 @@ START_TEST(test_sanity)
 }
 END_TEST
 
-BEVTL_TEST(test_sig1, 5, 10, "sig05.trace", "bevtl_5_10_sig05.breach.trace")
-BEVTL_TEST(test_sig2, 5, 10, "sig06.trace", "bevtl_5_10_sig06.breach.trace")
+BEVTL_TEST(test_sig1, 0.5, 1.5, "sig05.trace", "bevtl_0.5_1.5_sig05.breach.trace")
+BEVTL_TEST(test_sig2, 0.5, 1.5, "sig06.trace", "bevtl_0.5_1.5_sig06.breach.trace")
 
 static Suite *
 create_suite(void)
