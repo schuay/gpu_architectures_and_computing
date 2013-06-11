@@ -116,10 +116,11 @@ The $\Neg$ operator simply negates all signals points.
 \begin{figure}[ht]
 \begin{lstlisting}
 Compute(NOT, y) {
+    /* ny is the number of points in y. */
     for (i = 0; i < ny; i++) {
-        result[i].y = -y[i].y
+        result[i].y = -y[i].y;
     }
-    return result
+    return result;
 }
 \end{lstlisting}
 \label{fig:not}
@@ -136,24 +137,52 @@ all intersections between both signals must also be added to the result.
 \begin{figure}[ht]
 \begin{lstlisting}
 Compute(AND, x, y) {
-    ts = /* union of all time points in x, y, and all intersections between them */
+    ts = /* union of all time points in x, y, and all intersections between them */;
     i = 0;
     for (t in ts) {
-        result[i].t = t
+        result[i].t = t;
         result[i].y = min(
             interpolate(x at time t),
-            interpolate(y at time t))
-        i++
+            interpolate(y at time t));
+        i++;
     }
-    return result
+    return result;
 }
 \end{lstlisting}
 \label{fig:and}
 \caption{The AND operator.}
 \end{figure}
 
-\subsection{UNTIL}
 \subsection{EVTL}
+
+The sequential $\Evtl$ implementation is simply a reverse running maximum, again
+complicated by the existence of intersections between the current running maximum
+and the signal.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(EVTL, y) {
+    mx = y[ny - 1].y;
+    result.push_front({ y[ny - 1].t, mx });
+
+    for (i = ny - 2; i >= 0; i--) {
+        if (y[i + 1].y < mx && y[i].y > mx) {
+            t = /* Interpolate time of intersection */
+            result.push_front({ t, mx });
+        }
+        mx = max(y[i].y, mx);
+        result.push_front({ y[i].t, mx });
+    }
+    return result
+}
+\end{lstlisting}
+\label{fig:evtl}
+\caption{The EVTL operator.}
+\end{figure}
+
+
+\subsection{UNTIL}
+
 \subsection{BEVTL}
 
 Breach calulates all the windows it can an then propagates the according points
