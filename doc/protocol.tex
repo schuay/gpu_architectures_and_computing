@@ -4,6 +4,9 @@
 \usepackage{comment}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+\usepackage{amssymb}
+\usepackage{amsmath}
 
 \definecolor{Gray}{gray}{0.5}
 \definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
@@ -22,6 +25,7 @@
 }
 
 \title{
+	An efficient parallel signal temporal logic implementation \\
     VU GPU Architectures \& Computing \\
     SS 2013
 }
@@ -32,29 +36,68 @@
     Mino Sharkhawy
 }
 
+\renewcommand{\And}{\wedge}
+\newcommand{\Or}{\vee}
+\newcommand{\Neg}{\neg}
+\newcommand{\Impl}{\rightarrow}
+\newcommand{\Until}{\mathbf{U}}
+\newcommand{\Evtl}{\diamondsuit}
+\newcommand{\Alw}{\square}
+\newcommand{\Buntil}{\mathbf{U}_I}
+\newcommand{\Bevtl}{\diamondsuit_I}
+\newcommand{\Balw}{\square_I}
+
 \begin{document}
+
+\begin{comment}
+Problem statement, State of the art (semantics, ...), Sequential algorithms, Parallel ..., Test cases, benchmarks, How the project went, what we did.
+\end{comment}
 
 \maketitle
 
-\section{Background and Motivation}
+\section{Background}
+
+Temporal logic describes a system of rules for representing and reasoning about propositions
+qualified in terms of time\footnote{\url{http://en.wikipedia.org/wiki/Temporal_logic}}.
+It consists of the usual logical operators $\And, \Or, \Neg, \Impl$ as well as
+some collection of modal operators. In particular, signal temporal logic as used in this
+project defines the following additional operators:
+
+\begin{itemize}
+\item $a \: \Until \: b$: The \textbf{UNTIL} operator is true if and only if $a$ is true
+      at all points until some point at which $b$ becomes true.
+\item $\Evtl \: a$: The \textbf{EVENTUALLY} operator is true iff a becomes true at any point
+      in the future. It is equivalent to $\mathit{true} \: \Until \: a$.
+\item $\Alw \: a$: The \textbf{ALWAYS} operator is true iff a is true at every point in the range.
+      It is equivalent to $\neg \Evtl \neg a$.
+\end{itemize}
+
+Each of these three operators also has a bounded variant ($\Buntil, \: \Bevtl, \Balw$) which
+for each point $a$ in the signal restricts the processed interval to $a + I$.
+
+Furthermore, besides the usual boolean semantics (which always evaluate to either \textit{true} or
+\textit{false}), signal temporal logic is also defined over real-valued quantitative semantics which
+can be interpreted as indicating ``how much'' a condition is satisfied at any given point.
+
+\section{State of the Art}
+
+A. Donze, T. Ferrere, O. Maler, \emph{Efficient Robust Monitoring for STL} describes
+sequential algorithms for calculating all STL operators within linear time complexity.
+
+Algorithms are provided for the $\And, \Neg, \Until, \Evtl, \Bevtl$ operators, which are then used
+to construct all remaining operators as follows:
+
+\begin{align}
+a \Or b &= \Neg (\Neg a \And \Neg b) \\
+a \: \Until_{[s, t]} \: b &= \Alw_{[0, s]} \And \Evtl_{[s, t]} \And \Evtl_{[s, s]} (a \: \Until \: b)\\
+\Alw \:  a &= \Neg \Evtl  \Neg a \\
+\Balw \: a &= \Neg \Bevtl \Neg a
+\end{align} 
 
 \section{Objectives}
 
 \section{Design Overview}
 
 \section{Implementation Plan}
-
-\begin{comments}
-Initial results for AND seem to be roughly linear:
-
-NSIZE: ms
-256 * 257: 6.443328
-10 * 256 * 257: 27.997761
-20 * 256 * 257: 52.359810
-80 * 256 * 257: 251.557602
-
-Linux-x86_64 3.8.7, NVIDIA 313.30, GeForce GTX 660, Intel(R) Core(TM) i5 CPU 760  @ 2.80GHz,
-cuda 5.0.35, gcc 4.8.0, commit 1e56a4ac
-\end{comments}
 
 \end{document}
