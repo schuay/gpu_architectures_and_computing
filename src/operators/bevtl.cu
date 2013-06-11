@@ -20,7 +20,7 @@ __global__ static void
 to_idx_time(const sigpt_t *y,
             const int n,
             idx_time *out,
-            const int ofs,
+            const float ofs,
             const int count);
 
 __global__ static void
@@ -154,6 +154,9 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
     /* Remove duplicate points. */
     int all_n = thrust::unique(all_points, all_points + 3 * nin, sigpt_time_equals()) - all_points;
 
+    thrust::host_vector<sigpt_t> a(all_points, all_points + all_n);
+    sigpt_print("all", a.data(), all_n);
+
     /* Get start and end indices of the windows, this time including intersections. */
     thrust::device_ptr<int> sofs;
     time_to_idx_ofs(all_points, all_n, in, nin, s, &sofs);
@@ -175,8 +178,8 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
 
     calc_win_max<<<NBLOCKS, NTHREADS>>>(in.get(), sofs.get(), tofs.get(), nin, all_points.get(), final.get());
 
-    thrust::host_vector<sigpt_t> h(final, final + nin);
-    sigpt_print("out", h.data(), nin);
+    thrust::host_vector<sigpt_t> hf(final, final + nin);
+    sigpt_print("out", hf.data(), nin);
 
     *out = final;
     *nout = nin;
@@ -234,13 +237,13 @@ calc_ofs_points(const sigpt_t *in,
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        if (ofs_idx[i] >= n) {
-            sigpt_t tmp = { in[i].t + ofs, -INFINITY, 0};
+        float t = in[i].t + ofs;
+        if ((ofs_idx[i]) >= n || t > in[n - 1].t) {
+            sigpt_t tmp = { t, -INFINITY, 0};
             out[i] = tmp;
         } else {
             const sigpt_t *l = &in[ofs_idx[i] - 1];
             const sigpt_t *r = &in[ofs_idx[i]];
-            float t = in[i].t + ofs;
             out[i] = interpolate(l, r, t);
         }
     }
@@ -259,7 +262,7 @@ time_to_idx_ofs(const thrust::device_ptr<sigpt_t> &in,
     thrust::device_ptr<idx_time> nt = thrust::device_malloc<idx_time>(nin);
     to_idx_time<<<NBLOCKS, NTHREADS>>>(in.get(), nin, nt.get(), 0, 1);
 
-    thrust::device_ptr<idx_time> st = thrust::device_malloc<idx_time>(nin);
+    thrust::device_ptr<idx_time> st = thrust::device_malloc<idx_time>(nin_ofs);
     to_idx_time<<<NBLOCKS, NTHREADS>>>(in_ofs.get(), nin_ofs, st.get(), ofs, 0);
 
     int sntn = nin + nin_ofs;
@@ -314,7 +317,7 @@ __global__ static void
 to_idx_time(const sigpt_t *y,
             const int n,
             idx_time *out,
-            const int ofs,
+            const float ofs,
             const int count)
 {
     const int tid = threadIdx.x + blockIdx.x * blockDim.x;
