@@ -180,8 +180,37 @@ Compute(EVTL, y) {
 \caption{The EVTL operator.}
 \end{figure}
 
-
 \subsection{UNTIL}
+
+$\Until$ is composed of several $\Evtl, \And$, and $\Neg$ operations performed on
+individual segments. Note that \lstinline|z0| always references the value from the
+previous iteration. This is also the only operator which actually uses the signal derivative
+values \lstinline|signal.dy|.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(UNTIL, x, y) {
+    z0 = -INFINITY;
+    for (i = nx - 1; i >= 0; i--) {
+        if (x[i].dy <= 0) {
+            z1 = Compute(EVTL, y);
+            z2 = Compute(AND, z1, x);
+            z3 = Compute(AND, const_signal(x[i + 1].y), z0);
+        } else {
+            z1 = Compute(AND, y, const_signal(x[i].y));
+            z2 = Compute(EVTL, z1);
+            z3 = Compute(AND, x, z0);
+        }
+        z4 = Compute(OR, z2, z3);
+        result.push_front(/* All points in z4. */);
+        z0 = const_signal(z4[0].y);
+    }
+    return result
+}
+\end{lstlisting}
+\label{fig:evtl}
+\caption{The EVTL operator.}
+\end{figure}
 
 \subsection{BEVTL}
 
