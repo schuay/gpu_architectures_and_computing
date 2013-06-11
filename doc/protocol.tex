@@ -54,6 +54,9 @@ Problem statement, State of the art (semantics, ...), Sequential algorithms, Par
 \end{comment}
 
 \maketitle
+\pagebreak
+\tableofcontents
+\pagebreak
 
 \section{Background}
 
@@ -82,7 +85,8 @@ can be interpreted as indicating ``how much'' a condition is satisfied at any gi
 \section{State of the Art}
 
 A. Donze, T. Ferrere, O. Maler, \emph{Efficient Robust Monitoring for STL} describes
-sequential algorithms for calculating all STL operators within linear time complexity.
+sequential algorithms calculating robustness signals for all STL operators within linear
+time complexity.
 
 Algorithms are provided for the $\And, \Neg, \Until, \Evtl, \Bevtl$ operators, which are then used
 to construct all remaining operators as follows:
@@ -92,7 +96,65 @@ a \Or b &= \Neg (\Neg a \And \Neg b) \\
 a \: \Until_{[s, t]} \: b &= \Alw_{[0, s]} \And \Evtl_{[s, t]} \And \Evtl_{[s, s]} (a \: \Until \: b)\\
 \Alw \:  a &= \Neg \Evtl  \Neg a \\
 \Balw \: a &= \Neg \Bevtl \Neg a
-\end{align} 
+\end{align}
+
+Sequential implementations are outlined in the following sections. Each signal consists
+of a sequence of \lstinline|sigpt_t| structs:
+
+\begin{lstlisting}
+typedef struct {
+    float t;  /* The time. */
+    float y;  /* The value. */
+    float dy; /* The derivative. */
+} sigpt_t;
+\end{lstlisting}
+
+\subsection{NOT}
+
+The $\Neg$ operator simply negates all signals points.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(NOT, y) {
+    for (i = 0; i < ny; i++) {
+        result[i].y = -y[i].y
+    }
+    return result
+}
+\end{lstlisting}
+\label{fig:not}
+\caption{The NOT operator.}
+\end{figure}
+
+\subsection{AND}
+
+The $\And$ operator basically performs a point-wise minimum between both incoming signals.
+This is complicated by the fact that signal values need to be interpolated for all
+cases in which contains time points not found in the other signal. Additionally,
+all intersections between both signals must also be added to the result.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(AND, x, y) {
+    ts = /* union of all time points in x, y, and all intersections between them */
+    i = 0;
+    for (t in ts) {
+        result[i].t = t
+        result[i].y = min(
+            interpolate(x at time t),
+            interpolate(y at time t))
+        i++
+    }
+    return result
+}
+\end{lstlisting}
+\label{fig:and}
+\caption{The AND operator.}
+\end{figure}
+
+\subsection{UNTIL}
+\subsection{EVTL}
+\subsection{BEVTL}
 
 \section{Objectives}
 
