@@ -15,7 +15,7 @@ find_package(BISON REQUIRED)
 find_package(Check REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_definitions("-Wextra -pedantic -Wno-long-long")
+    add_definitions("-Wextra -Wall -pedantic -Wno-long-long -O3")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 endif()
 
