@@ -321,6 +321,7 @@ schedules the entire signal to multiple processors on the GPU which in turn nega
 the set of points they have been assigned.
 
 \subsubsection{Consolidate}
+\label{sec:consolidate}
 
 \begin{figure}[H]
 \begin{lstlisting}
@@ -462,6 +463,105 @@ max_y(a, b) {
 \end{figure}
 
 \subsubsection{UNTIL}
+
+While we were unable to completely parallelize the UNTIL operator due to the fact,
+that each iteration of the loop in the sequential operation (see
+Listing~\ref{fig:until}) depends on the previous result, we could extract large parts
+of said loop and parallelize these.
+
+Specifically, the computation of all points in $z1$, $z2$, $z3$ and $z4$ can be
+parallelized. The $z0$ is computed sequentially on the CPU.
+
+\begin{figure}[H]
+\begin{lstlisting}
+void
+stl_until(const thrust::device_ptr<sigpt_t> &lhs,
+          const int nlhs,
+          const thrust::device_ptr<sigpt_t> &rhs,
+          const int nrhs,
+          thrust::device_ptr<sigpt_t> *out,
+          int *nout);
+\end{lstlisting}
+\caption{
+\label{fig:parallel_until}
+The UNTIL interface.}
+\end{figure}
+
+For the two given signals $lhs$ and $rhs$, we calculate $lhs \Until rhs$.
+
+\begin{lstlisting}
+
+clhs;
+crhs;
+nc;
+
+consolidate(lhs, nlhs, rhs, nrhs, &clhs, &crhs, &nc);
+
+\end{lstlisting}
+
+First, the two signals are consolidated such that each one contains all points in
+time of both signals and their intersections (see Section~\ref{sec:consolidate}).
+
+\begin{lstlisting}
+
+neg_dys_lhs;
+neg_dys_rhs;
+pos_dys_lhs;
+pos_dys_rhs;
+
+clhsi = intervals(clhs);
+crhsi = intervals(crhs);
+
+split_by_dy(clhsi, crhsi, nc, &neg_dys_lhs, &neg_dys_rhs, &pos_dys_lhs, &pos_dys_rhs, (<= 0));
+
+\end{lstlisting}
+
+Next the signals are split according to the $dy$ value in $clhs$. The points in
+$crhs$ and $clhs$ where it is $\leq 0$ end up in $neg\_dys\_lhs$ and $neg\_dys\_rhs$,
+while the other end up in $pos\_dys\_lhs$ and $pos\_dys\_rhs$ respectively.
+
+Additionally, for each of these points at index $i$ the interval from this point to
+the one at $i+1$ is calculated.
+
+\begin{lstlisting}
+
+iz1 = for_each_interval(Compute(EVTL), neg_dys_rhs);
+iz2 = for_each_interval(Compute(AND), iz1, neg_dys_lhs);
+
+ez1 = for_each_interval(Compute(AND), neg_dys_rhs, constant(pos_dys_lhs));
+ez2 = for_each_interval(Compute(EVTL), ez1);
+
+\end{lstlisting}
+
+Then we calculate the $z1$ and $z2$ from for all iterations where $dy \leq 0$ and for
+all iterations where $dy > 0$ in parallel.
+
+\begin{lstlisting}
+
+z2 = merge(iz2, ez2);
+z0 = seq_z0(clhs, crhs, z2, nc);
+
+/* This is the LHS for our z3 calculation. */
+z4 = extract_z4(clhs);
+
+z3 = for_each_interval(Compute(AND), z4, z0);
+resulti = for_each_interval(Compute(OR), z2, z2);
+
+\end{lstlisting}
+
+As stated above, we have to compute $z0$ sequentially. This is done in exactly the
+same way as shown in Listing~\ref{fig:until}.
+
+With the $z0$, we can then calculate the $z3$ and our result in parallel.
+
+\begin{lstlisting}
+
+*out = merge_intervals(resulti);
+*nout = out.n;
+
+\end{lstlisting}
+
+Lastly, the intervals in $result$ are merged into one final signal.
 
 \subsubsection{BEVTL}
 
