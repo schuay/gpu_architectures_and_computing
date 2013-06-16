@@ -214,6 +214,51 @@ Compute(UNTIL, x, y) {
 
 \subsection{BEVTL}
 
+The $\Bevtl$ calculates the maximum of the window $t + I$ for each $t$. It is
+essentially a running maximum of the entire signal with a window size of $b - a$,
+where $I = [a,b]$. To do this, the sequential implementation iterates over the signal
+and keeps a list of points, which still have to be considered for the current time.
+
+You can see the algorithm in Listing~\ref{fig:bevtl}.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(BEVTL, y, a, b) {
+    ya = shift(Compute(EVTL, y), a);
+    yb = shift(Compute(EVTL, y), b);
+    yd = Compute(AND, ya, yb);
+    s = y[0].t - b;
+    t = s;
+    i = 0;
+    M = {};
+    while (t + a < y[n - 1].t) {
+        t = min(y[min(M)].t - a, y[i + 1].t - b);
+        if (t == y[min(M)].t - a) {
+            M.del(min(M));
+            s = t;
+        }
+        if (t == y[i + 1].t - b) {
+            while (y(y[i + 1].t - b) >= y(max(M)) && M != {}) {
+                M.del(max(M));
+            }
+            M.add(i+1);
+            i += 1;
+        }
+        if (s >= y[0].t) {
+            if (M == {}) {
+                z[s:t] = yd[s:t];
+            } else {
+                z[s:t] = Compute(OR, yd[s:t], y[min(M)]);
+            }
+        }
+    }
+    return z;
+}
+\end{lstlisting}
+\label{fig:bevtl}
+\caption{The BEVTL operator.}
+\end{figure}
+
 \section{Problem Statement}
 
 \section{Implementation}
