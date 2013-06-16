@@ -466,4 +466,30 @@ max_y(a, b) {
 
 \section{Results}
 
+The STL operators were parallelized with varying degrees of success:
+
+As expected, parallelizing the NOT operator was trivial, with a resulting complexity of $O(\frac{n}{p})$. More surprisingly, all other
+operators proved to be much more of a challenge than initially expected.
+
+The AND and EVTL operators were also parallelized successfully, with a complexity only depending on $n$ and $p$.
+
+The UNTIL algorithm was only partially parallelizable; in particular,
+$z_0 = z_2 \Or (z_4 \And z_{0_{prev}})$ could not be solved with a single scan since
+the operation is not associative. Another proposed solution, which worked by unrolling this formula over all points
+and then running a segmented scan resulted in a space complexity which made processing even fairly small signals impossible within the constraints of current GPUs. We were also sceptical if such a solution could result in any speed-up over
+the existing linear sequential algorithm. In the end, we compromised by performing
+as much as we could in parallel, and calculating $z_0$ sequentially.
+
+Finally, we implemented a parallel algorithm for the BEVTL operator. However,
+our idea for creating and maintaining a bounded running maximum also proved to
+be infeasable because of its space-complexity. Once again we had to compromise:
+the current implementation is completely parallelized, but its complexity depends
+on the window size (= the bounds) as well as the signal length.
+
+% TODO: Say something about benchmark results either here or in the next section.
+
+\subsection{Benchmarks}
+
+\section{Further Work}
+
 \end{document}
