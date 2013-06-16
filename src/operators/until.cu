@@ -518,12 +518,9 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
      *
      * We still require the segment-wise constant signal of lhs. */
 
-    thrust::device_ptr<ivalpt_t> neg_dys_lhs_c =
-        thrust::device_malloc<ivalpt_t>(nnegative_dys);
     thrust::device_ptr<ivalpt_t> pos_dys_lhs_c =
         thrust::device_malloc<ivalpt_t>(npositive_dys);
 
-    thrust::transform(neg_dys_lhs, neg_dys_lhs + nnegative_dys, neg_dys_lhs_c, ivalpt_constantize());
     thrust::transform(pos_dys_lhs, pos_dys_lhs + npositive_dys, pos_dys_lhs_c, ivalpt_constantize());
 
     /* We begin with the if branch: */
@@ -592,7 +589,6 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_free(neg_dys_rhs);
     thrust::device_free(pos_dys_lhs);
     thrust::device_free(pos_dys_rhs);
-    thrust::device_free(neg_dys_lhs_c);
     thrust::device_free(pos_dys_lhs_c);
     thrust::device_free(iz2);
     thrust::device_free(ez2);
