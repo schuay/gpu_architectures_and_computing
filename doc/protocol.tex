@@ -422,6 +422,19 @@ can be easily done completely in parallel.
 
 \subsubsection{EVTL}
 
+\begin{figure}[H]
+\begin{lstlisting}
+void
+stl_evtl(const thrust::device_ptr<sigpt_t> &in,
+         const int nin,
+         thrust::device_ptr<sigpt_t> *out,
+         int *nout);
+\end{lstlisting}
+\caption{
+\label{fig:parallel_evtl}
+The EVTL interface.}
+\end{figure}
+
 The parallel EVTL first calculates for every point $t$ the maximum of all points from
 $t$ to the end of the signal. It uses a scan for this operation. After this step the
 EVTL for each point in the input signal is already correct.
