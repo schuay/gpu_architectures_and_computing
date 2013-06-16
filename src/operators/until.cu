@@ -512,6 +512,9 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
             pos_dys_lhs.get(),
             pos_dys_rhs.get());
 
+    thrust::device_free(indices_of_negative_dys);
+    thrust::device_free(indices_of_positive_dys);
+
     /* neg_dys_lhs now holds all indices of negative dy's in clhs,
      * and pos_dys_lhs all indices of positive dy's in clhs. Likewise for
      * rhs (it still depends on dy's in clhs though!)
@@ -523,18 +526,27 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     thrust::transform(pos_dys_lhs, pos_dys_lhs + npositive_dys, pos_dys_lhs_c, ivalpt_constantize());
 
+    thrust::device_free(pos_dys_lhs);
+
     /* We begin with the if branch: */
 
     thrust::device_ptr<ivalpt_t> iz1 = thrust::device_malloc<ivalpt_t>(nnegative_dys);
     segment_evtl<<<NBLOCKS, NTHREADS>>>(neg_dys_rhs.get(), nnegative_dys, iz1.get());
 
+    thrust::device_free(neg_dys_rhs);
+
     thrust::device_ptr<ivalpt_t> iz2 = iz1; /* If this is ever changed, don't forget to free. */
     segment_bin<<<NBLOCKS, NTHREADS>>>(iz1.get(), neg_dys_lhs.get(), nnegative_dys, iz2.get(), OP_AND);
+
+    thrust::device_free(neg_dys_lhs);
 
     /* On to the else branch: */
 
     thrust::device_ptr<ivalpt_t> ez1 = thrust::device_malloc<ivalpt_t>(npositive_dys);
     segment_bin<<<NBLOCKS, NTHREADS>>>(pos_dys_rhs.get(), pos_dys_lhs_c.get(), npositive_dys, ez1.get(), OP_AND);
+
+    thrust::device_free(pos_dys_lhs_c);
+    thrust::device_free(pos_dys_rhs);
 
     thrust::device_ptr<ivalpt_t> ez2 = ez1; /* If this is ever changed, don't forget to free. */
     segment_evtl<<<NBLOCKS, NTHREADS>>>(ez1.get(), npositive_dys, ez2.get());
@@ -544,23 +556,36 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     thrust::device_ptr<ivalpt_t> z2 = thrust::device_malloc<ivalpt_t>(nc);
     thrust::merge(iz2, iz2 + nnegative_dys, ez2, ez2 + npositive_dys, z2, ivalpt_less());
 
+    thrust::device_free(ez2);
+    thrust::device_free(iz2);
+
     /* *Sequentially* compute z0. */
 
     thrust::device_ptr<ivalpt_t> z0 = thrust::device_malloc<ivalpt_t>(nc);
     seq_z0(clhs, crhs, z2, nc, z0);
+
+    thrust::device_free(crhs);
 
     /* Extract z4 (the LHS input to the z3 steps). */
 
     thrust::device_ptr<ivalpt_t> z4 = thrust::device_malloc<ivalpt_t>(nc);
     extract_z4<<<NBLOCKS, NTHREADS>>>(clhs.get(), nc, z4.get());
 
+    thrust::device_free(clhs);
+
     /* z3 and the interval-wise result are common over both branches. */
 
     thrust::device_ptr<ivalpt_t> z3 = thrust::device_malloc<ivalpt_t>(nc);
     segment_bin<<<NBLOCKS, NTHREADS>>>(z4.get(), z0.get(), nc, z3.get(), OP_AND);
 
+    thrust::device_free(z0);
+    thrust::device_free(z4);
+
     thrust::device_ptr<ivalpt_t> iout = thrust::device_malloc<ivalpt_t>(nc);
     segment_bin<<<NBLOCKS, NTHREADS>>>(z2.get(), z3.get(), nc, iout.get(), OP_OR);
+
+    thrust::device_free(z2);
+    thrust::device_free(z3);
 
     /* Finally, merge our interval points back into an sigpt_t sequence. */
 
@@ -574,24 +599,9 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
 
     ivalpt_concat<<<NBLOCKS, NTHREADS>>>(iout.get(), concat_indices.get(), nc, dout.get());
 
+    thrust::device_free(iout);
+    thrust::device_free(concat_indices);
+
     *out = dout;
     *nout = ndout;
-
-    thrust::device_free(concat_indices);
-    thrust::device_free(iout);
-    thrust::device_free(z4);
-    thrust::device_free(z3);
-    thrust::device_free(z2);
-    thrust::device_free(z0);
-    thrust::device_free(indices_of_negative_dys);
-    thrust::device_free(indices_of_positive_dys);
-    thrust::device_free(neg_dys_lhs);
-    thrust::device_free(neg_dys_rhs);
-    thrust::device_free(pos_dys_lhs);
-    thrust::device_free(pos_dys_rhs);
-    thrust::device_free(pos_dys_lhs_c);
-    thrust::device_free(iz2);
-    thrust::device_free(ez2);
-    thrust::device_free(clhs);
-    thrust::device_free(crhs);
 }
