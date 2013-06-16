@@ -492,4 +492,16 @@ on the window size (= the bounds) as well as the signal length.
 
 \section{Further Work}
 
+Plenty of work remains for future projects.
+
+Completely and optimally parallelizing both the UNTIL and BEVTL operators still needs
+to be investigated.
+
+Room for improvement remains for optimizing all operators. For example, using streams
+and optimizing memory allocation and deallocation immediately comes to mind.
+
+An initial formula parser already exists. A future project could work on integrating the operator implementations with a component which operates on the abstract syntax tree produced by the parser to process complete formulas.
+
+Likewise, the problem of arbitrary expressions ($\log(s_0) \; \text{UNTIL} \; \text{fft}(..)$) is also still unsolved.
+
 \end{document}
