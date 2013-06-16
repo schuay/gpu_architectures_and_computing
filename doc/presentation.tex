@@ -38,6 +38,12 @@
 
 \begin{frame}
 \frametitle{Results}
+\begin{itemize}
+\item NOT trivially parallelizable
+\item AND, EVTL involved, but possible in $O(f(n,p))$
+\item UNTIL mostly possible, but one sequential part remains
+\item EVTL parallelizable, but dependent on window size $O(f(n,p,w))$
+\end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -58,6 +64,23 @@
 
 \begin{frame}
 \frametitle{Lessons Learned}
+\begin{itemize}
+\item Create benchmarks at the beginning
+\item Floating point arithmetic
+\item Simple POC before implementation
+\item Ensure task is possible before barging in
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Future Tasks}
+\begin{itemize}
+\item Completely parallel UNTIL, EVTL not dependent on window size
+\item Multi-GPU
+\item Optimizations
+\item Processing entire formulas
+\item Arbitrary expressions in input formulas
+\end{itemize}
 \end{frame}
 
 \end{document}
