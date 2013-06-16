@@ -7,6 +7,7 @@
 \usepackage[pdfborder={0 0 0}]{hyperref}
 \usepackage{amssymb}
 \usepackage{amsmath}
+\usepackage{float}
 
 \definecolor{Gray}{gray}{0.5}
 \definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
@@ -316,6 +317,69 @@ The parallel NOT operator does exactly the same thing as the sequential one. It
 schedules the entire signal to multiple processors on the GPU which in turn negate
 the set of points they have been assigned.
 
+\subsubsection{Consolidate}
+
+\begin{figure}[H]
+\begin{lstlisting}
+void
+consolidate(const thrust::device_ptr<sigpt_t> &lhs,
+            const int nlhs,
+            const thrust::device_ptr<sigpt_t> &rhs,
+            const int nrhs,
+            thrust::device_ptr<sigpt_t> *olhs,
+            thrust::device_ptr<sigpt_t> *orhs,
+            int *nout);
+\end{lstlisting}
+\caption{
+\label{fig:parallel_consolidate}
+The consolidate interface.}
+\end{figure}
+
+Given two incoming signals $lhs, rhs$, \lstinline|consolidate| builds a
+merged time sequence which contains all time points as well as all intersection
+time points of both signals. The resulting time sequence is used to reconstruct
+the these signals using interpolation. This operation is trivial as a sequential
+operation, but quite involved when done in parallel.
+
+The first part of our algorithm is concerned with associating each point $l \in lhs$
+with a point $r \in rhs$ such that $r$ is the latest point in $rhs$ with $r.t \leq l.t$. Likewise, each point $r \in rhs$ must be associated with a point $l \in lhs$.
+
+\begin{lstlisting}
+t1 = merge lhs and rhs time sequences;
+
+t1lhs = extract all lhs times from t1
+t1lhs = inclusive_scan(t1lhs, max)
+/* t1lhs now contains the associated lhs point for each index. */
+
+t1rhs = extract all rhs times from t1
+t1rhs = inclusive_scan(t1rhs, max)
+
+t1 = add the information from t1lhs and t1rhs to t1
+
+t1 = remove duplicate time points from t1
+\end{lstlisting}
+
+Using the associations determined in the previous section we can easily calculate
+all intersections without losing performance by searching for associated points
+in the opposing signal.
+
+\begin{lstlisting}
+t2 = a new signal twice as long as t1, t2[i * 2] = t1[i]
+/* All t2[i * 2 + 1] points are potential intersections. */
+
+t2 = calculate_intersections(t2)
+
+t2 = remove potential intersections which did not turn out to be an intersection
+\end{lstlisting}
+
+Finally, the resulting time sequence is then used to create the outgoing signals
+$lhs', rhs'$ by interpolating the incoming signals.
+
+\begin{lstlisting}
+(clhs, crhs) = extrapolate(lhs, rhs, t2)
+return (clhs, crhs)
+\end{lstlisting}
+
 \subsubsection{AND}
 
 \begin{figure}[ht]
@@ -359,8 +423,8 @@ $t$ to the end of the signal. It uses a scan for this operation. After this step
 EVTL for each point in the input signal is already correct.
 
 However, in the case that the EVTL value rose in an earlier point (i.e.
-\lstinline{Compute(EVTL, y)[i].y > Compute(EVTL, y)[i+1].y}), the exact point in time,
-where the EVTL is greater than \lstinline{Compute(EVTL, y)[i+1]} for the first time
+\lstinline|Compute(EVTL, y)[i].y > Compute(EVTL, y)[i+1].y|), the exact point in time,
+where the EVTL is greater than \lstinline|Compute(EVTL, y)[i+1]| for the first time
 has to be calculated in order to generate a valid signal.
 
 Since this operation only needs values at $i$ and $i + 1$ and doesn't depend on the
