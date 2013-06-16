@@ -82,7 +82,7 @@ Furthermore, besides the usual boolean semantics (which always evaluate to eithe
 \textit{false}), signal temporal logic is also defined over real-valued quantitative semantics which
 can be interpreted as indicating ``how much'' a condition is satisfied at any given point.
 
-\section{State of the Art}
+\section{State of the Art} \label{sec:stateoftheart}
 
 A. Donze, T. Ferrere, O. Maler, \emph{Efficient Robust Monitoring for STL} describes
 sequential algorithms calculating robustness signals for all STL operators within linear
@@ -261,9 +261,22 @@ Compute(BEVTL, y, a, b) {
 
 \section{Problem Statement}
 
+The algorithms shown in section \ref{sec:stateoftheart} all have linear complexity
+but are completely sequential.
+GPUs offer the potential for vast performance improvements, but require algorithms
+which are suited to their highly parallel architectures. The objective of this project
+was to attempt to parallelize all algorithms required for STL processing. In case of success, these could then be
+
+\begin{itemize}
+\item benchmarked and compared to the existing Breach\footnote{\url{http://www.eecs.berkeley.edu/~donze/breach_page.html}} implementation,
+\item swapped into Breach to replace the sequential algorithms, and
+\item integrated with a parser in order to process entire STL formulas.
+\end{itemize}
+
 \section{Implementation}
 
 \subsection{Tools}
+
 \subsection{Test Environment}
 \subsection{Parallel Algorithms}
 
