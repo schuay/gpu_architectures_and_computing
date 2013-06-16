@@ -354,6 +354,46 @@ can be easily done completely in parallel.
 
 \subsubsection{EVTL}
 
+The parallel EVTL first calculates for every point $t$ the maximum of all points from
+$t$ to the end of the signal. It uses a scan for this operation. After this step the
+EVTL for each point in the input signal is already correct.
+
+However, in the case that the EVTL value rose in an earlier point (i.e.
+\lstinline{Compute(EVTL, y)[i].y > Compute(EVTL, y)[i+1].y}), the exact point in time,
+where the EVTL is greater than \lstinline{Compute(EVTL, y)[i+1]} for the first time
+has to be calculated in order to generate a valid signal.
+
+Since this operation only needs values at $i$ and $i + 1$ and doesn't depend on the
+output anywhere else, it can be performed for each pair of points independently.
+
+\begin{figure}[ht]
+\begin{lstlisting}
+Compute(EVTL, y) {
+    z = scan(y, max_y);
+
+    /* Each iteration of this loop can be scheduled to a different GPU processor. */
+    for (i = 0; i < ny; i++) {
+        if (i < ny - 1 && z[i].y > z[i + 1].y) {
+            newp.t = intersect(z[i], y[i], z[i + 1], y[i + 1]);
+            newp.y = z[i + 1].y;
+            z.insertAfter(i, newp);
+        }
+    }
+
+    return z;
+}
+
+max_y(a, b) {
+    ret.t = b.t;
+    ret.y = max(a.y, b.y);
+
+    return ret;
+}
+\end{lstlisting}
+\label{fig:par_evtl}
+\caption{The parallel EVTL operator.}
+\end{figure}
+
 \subsubsection{UNTIL}
 
 \subsubsection{BEVTL}
