@@ -318,6 +318,40 @@ the set of points they have been assigned.
 
 \subsubsection{AND}
 
+\begin{figure}[ht]
+\begin{lstlisting}
+void
+stl_and(const thrust::device_ptr<sigpt_t> &lhs,
+        const int nlhs,
+        const thrust::device_ptr<sigpt_t> &rhs,
+        const int nrhs,
+        thrust::device_ptr<sigpt_t> *out,
+        int *nout)
+{
+	consolidate(lhs, rhs, clhs, crhs);
+	return pairwise_minimum(clhs, crhs);
+}
+\end{lstlisting}
+\caption{
+\label{fig:parallel_and}
+The parallel AND operator interface and high-level implementation.}
+\end{figure}
+
+Interface and a high-level implementation overview of the AND operator can be found 
+in figure \ref{fig:parallel_and}.
+
+The entire complexity of the AND operator is hidden in the fact that
+both signals may not have the same set time points, and that new points
+may be generated through intersections between the two.
+
+The \lstinline|consolidate()|
+function takes two such signals $lhs, rhs$, and returns equivalent signals $lhs', rhs'$ which include
+all of these additional points. The set of time points in $lhs'$ is equal to the set
+of time points in $rhs'$.
+
+All that remains is to build the point-wise minimum over both signals, which
+can be easily done completely in parallel.
+
 \subsubsection{EVTL}
 
 \subsubsection{UNTIL}
