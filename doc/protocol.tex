@@ -114,7 +114,7 @@ typedef struct {
 
 The $\Neg$ operator simply negates all signals points.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(NOT, y) {
     /* ny is the number of points in y. */
@@ -135,7 +135,7 @@ This is complicated by the fact that signal values need to be interpolated for a
 cases in which contains time points not found in the other signal. Additionally,
 all intersections between both signals must also be added to the result.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(AND, x, y) {
     ts = /* union of all time points in x, y, and all intersections between them */;
@@ -160,7 +160,7 @@ The sequential $\Evtl$ implementation is simply a reverse running maximum, again
 complicated by the existence of intersections between the current running maximum
 and the signal.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(EVTL, y) {
     mx = y[ny - 1].y;
@@ -188,7 +188,7 @@ individual segments. Note that \lstinline|z0| always references the value from t
 previous iteration. This is also the only operator which actually uses the signal derivative
 values \lstinline|signal.dy|.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(UNTIL, x, y) {
     z0 = -INFINITY;
@@ -222,7 +222,7 @@ and keeps a list of points, which still have to be considered for the current ti
 
 You can see the algorithm in Listing~\ref{fig:bevtl}.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(BEVTL, y, a, b) {
     ya = shift(Compute(EVTL, y), a);
@@ -382,7 +382,7 @@ return (clhs, crhs)
 
 \subsubsection{AND}
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 void
 stl_and(const thrust::device_ptr<sigpt_t> &lhs,
@@ -430,7 +430,7 @@ has to be calculated in order to generate a valid signal.
 Since this operation only needs values at $i$ and $i + 1$ and doesn't depend on the
 output anywhere else, it can be performed for each pair of points independently.
 
-\begin{figure}[ht]
+\begin{figure}[H]
 \begin{lstlisting}
 Compute(EVTL, y) {
     z = scan(y, max_y);
