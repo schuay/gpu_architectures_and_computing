@@ -26,7 +26,13 @@ val = QMITL_Eval2raw(Sys, phi_not, traj);
 val.name = [TRACE_PATH 'alw_sig05.breach.trace'];
 resultArray = [resultArray val];
 
-
+% plot the signals
+figure (1);
+subplot(2,1,1);
+plot(sig1.time, sig1.X, '-sb',...
+     val.time, val.X, '-sg');
+title('sig1 (blue), "alw (s1[t] > 0)" (green)');
+grid on;
 %%
 %% second test
 %%
@@ -46,3 +52,9 @@ val = QMITL_Eval2raw(Sys, phi_not, traj);
 writeSignal([TRACE_PATH 'sig06.trace'], [t ; y]);
 val.name = [TRACE_PATH 'alw_sig06.breach.trace'];
 resultArray = [resultArray val];
+figure (2);
+subplot(2,1,1);
+plot(t, y, '-sb',...
+     val.time, val.X, '-sg');
+title('sig1 (blue), "alw (s1[t] > 0)" (green)');
+grid on;

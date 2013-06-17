@@ -53,7 +53,30 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
         case 'EVTL-5000000'
             [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), 'ev');
             
+        case 'ALW-1000'
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), 'alw');
+        case 'ALW-10000'
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000), 'alw');
+        case 'ALW-100000'
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000), 'alw');
+        case 'ALW-1000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000), 'alw');
+        case 'ALW-5000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), 'alw');
+            
           
+        case 'UNTIL-1000'
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'until');
+        case 'UNTIL-10000'
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), 'until');
+        case 'UNTIL-100000'
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), 'until');
+        case 'UNTIL-1000000'
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), 'until');
+        case 'UNTIL-5000000'
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), 'until');
+
+            
         case 'AND-rand-1000'
             [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), 'and');
         case 'AND-rand-10000'
@@ -98,6 +121,10 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
         case 'NOT-rand-5000000'
             [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), 'not');
             
+        
+        case 'AND_1_2-1000'
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'and');
+        
             
         otherwise
             returncode = 1;
