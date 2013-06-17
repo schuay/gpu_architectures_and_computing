@@ -207,8 +207,8 @@ print_elapsed_time(const char *formula,
                    const char *sig2_file,
                    float time) 
 {
-    printf("%s: finished test %s ", prog_name, formula);
-    printf(" elapsed time: %.6f s\n", time / 1000); // print in sec to be inline with matlab
+    printf("%s: finished test %s elapsed time: %.6f s\n", 
+           prog_name, formula, time / 1000); // print in sec to be inline with matlab
 }
 
 
@@ -334,7 +334,7 @@ main(int argc, char **argv)
         }
 
         if (strlen(formula) > strlen(OPNAME_UNTIL)) {
-            if (sscanf(formula, OPNAME_UNTIL "_\[%f,%f\]", &lower_bound, &upper_bound) != 2) {
+            if (sscanf(formula, OPNAME_UNTIL "_[%f,%f]", &lower_bound, &upper_bound) != 2) {
                 fprintf(stderr, "could not parse bound values for operator " 
                                 OPNAME_UNTIL "\n");
                 exit(EXIT_FAILURE);
@@ -356,7 +356,6 @@ main(int argc, char **argv)
                                 OPNAME_ALW "\n");
                 exit(EXIT_FAILURE);
             } else {
-                fprintf(stdout, "parsed bounds: %f, %f\n", lower_bound, upper_bound);
                 time = unary_bound_operator_test(stl_balw, sig1, lower_bound, upper_bound, result);
             }
         } else {
@@ -367,7 +366,7 @@ main(int argc, char **argv)
     } else if (strncmp(formula, OPNAME_EVTL, strlen(OPNAME_EVTL)) == 0) {
 
         if (strlen(formula) > strlen(OPNAME_EVTL)) {
-            if (sscanf(formula, OPNAME_EVTL "_\[%f,%f\]", &lower_bound, &upper_bound) != 2) {
+            if (sscanf(formula, OPNAME_EVTL "_[%f,%f]", &lower_bound, &upper_bound) != 2) {
                 fprintf(stderr, "cound not parse bound values for operator "
                                 OPNAME_EVTL "\n");
                 exit(EXIT_FAILURE);
