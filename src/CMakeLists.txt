@@ -21,6 +21,9 @@ target_link_libraries(stl_bench
     stl_or
     stl_alw
     stl_until
+    stl_buntil
+    stl_bevtl
+    stl_balw
 )
 
 set(BUILD_SHARED_LIBS OFF)

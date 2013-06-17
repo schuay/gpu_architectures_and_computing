@@ -19,10 +19,37 @@ extern "C" {
 #include "operators/not.hpp"
 #include "operators/or.hpp"
 #include "operators/until.hpp"
+#include "operators/buntil.hpp"
+#include "operators/bevtl.hpp"
+#include "operators/balw.hpp"
 #include "sigcmp.hpp"
 
 
+// define operator names (for commanline parsing)
+#define OPNAME_NOT      "NOT"
+#define OPNAME_AND      "AND"
+#define OPNAME_OR       "OR"
+#define OPNAME_ALW      "ALW"
+#define OPNAME_EVTL     "EVTL"
+#define OPNAME_UNTIL    "UNTIL"
+
+
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)
+
+#define PRE_MEASURE_TIME \
+    cudaEvent_t start, stop; \
+    float elapsedTime;       \
+                             \
+    checkCudaError(cudaEventCreate(&start));    \
+    checkCudaError(cudaEventCreate(&stop));     \
+    checkCudaError(cudaEventRecord(start, 0))
+
+#define POST_MEASURE_TIME \
+    checkCudaError(cudaEventRecord(stop, 0));   \
+    checkCudaError(cudaEventSynchronize(stop)); \
+    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));    \
+    checkCudaError(cudaEventDestroy(start));    \
+    checkCudaError(cudaEventDestroy(stop))
 
 
 typedef void (*binary_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
@@ -31,6 +58,15 @@ typedef void (*binary_operator_t) (const thrust::device_ptr<sigpt_t> &, const in
 
 typedef void (*unary_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
                                   thrust::device_ptr<sigpt_t>*, int*);
+
+typedef void (*binary_bound_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
+                                         const thrust::device_ptr<sigpt_t> &, const int,
+                                         const float s, const float t,
+                                         thrust::device_ptr<sigpt_t>*, int*);
+
+typedef void (*unary_bound_operator_t) (const thrust::device_ptr<sigpt_t> &, const int,
+                                        const float s, const float t,
+                                        thrust::device_ptr<sigpt_t>*, int*);
 
 static char *prog_name = NULL;
 
@@ -80,20 +116,11 @@ binary_operator_test(binary_operator_t op_function,
     thrust::device_ptr<sigpt_t> d_result;
     int nout;
 
-    cudaEvent_t start, stop;
-    float elapsedTime;
-
-    checkCudaError(cudaEventCreate(&start));
-    checkCudaError(cudaEventCreate(&stop));
-    checkCudaError(cudaEventRecord(start, 0));
+    PRE_MEASURE_TIME;
 
     op_function(&sig1[0], sig1.size(), &sig2[0], sig2.size(), &d_result, &nout);
 
-    checkCudaError(cudaEventRecord(stop, 0));
-    checkCudaError(cudaEventSynchronize(stop));
-    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
-    checkCudaError(cudaEventDestroy(start));
-    checkCudaError(cudaEventDestroy(stop));
+    POST_MEASURE_TIME;
 
     result.assign(d_result, d_result + nout);
     thrust::device_free(d_result);
@@ -111,22 +138,61 @@ unary_operator_test(unary_operator_t op_function,
     thrust::device_vector<sigpt_t> in(a);
     thrust::device_ptr<sigpt_t> out;
     int nout;
-
-    cudaEvent_t start, stop;
-    float elapsedTime;
-
-    checkCudaError(cudaEventCreate(&start));
-    checkCudaError(cudaEventCreate(&stop));
-    checkCudaError(cudaEventRecord(start, 0));
-
+    
+    PRE_MEASURE_TIME;
+    
     op_function(&in[0], in.size(), &out, &nout);
 
-    checkCudaError(cudaEventRecord(stop, 0));
-    checkCudaError(cudaEventSynchronize(stop));
-    checkCudaError(cudaEventElapsedTime(&elapsedTime, start, stop));
-    checkCudaError(cudaEventDestroy(start));
-    checkCudaError(cudaEventDestroy(stop));
+    POST_MEASURE_TIME;
 
+    result.assign(out, out + nout);
+    thrust::device_free(out);
+
+    return elapsedTime;
+}
+
+
+static float
+binary_bound_operator_test(binary_bound_operator_t op_function,
+                           const thrust::host_vector<sigpt_t> &a,
+                           const thrust::host_vector<sigpt_t> &b,
+                           const float s, const float t,
+                           thrust::host_vector<sigpt_t> &result)
+{
+    thrust::device_vector<sigpt_t> sig1(a);
+    thrust::device_vector<sigpt_t> sig2(b);
+    thrust::device_ptr<sigpt_t> d_result;
+    int nout;
+
+    PRE_MEASURE_TIME;
+
+    op_function(&sig1[0], sig1.size(), &sig2[0], sig2.size(), s, t, &d_result, &nout);
+
+    POST_MEASURE_TIME;
+
+    result.assign(d_result, d_result + nout);
+    thrust::device_free(d_result);
+
+    return elapsedTime;
+}
+
+
+static float
+unary_bound_operator_test(unary_bound_operator_t op_function,
+                          const thrust::host_vector<sigpt_t> &a,
+                          const float s, const float t, 
+                          thrust::host_vector<sigpt_t> &result)
+{
+
+    thrust::device_vector<sigpt_t> in(a);
+    thrust::device_ptr<sigpt_t> out;
+    int nout;
+    
+    PRE_MEASURE_TIME;
+    
+    op_function(&in[0], in.size(), s, t, &out, &nout);
+
+    POST_MEASURE_TIME;
 
     result.assign(out, out + nout);
     thrust::device_free(out);
@@ -232,50 +298,85 @@ main(int argc, char **argv)
 
 
     float time;
+    float lower_bound;
+    float upper_bound;
     /*
      * check for operator and execute it 
      * TODO: can we do this with the parser???
      */
-    if (strncmp(formula, "AND", 3) == 0) {
+    if (strncmp(formula, OPNAME_AND, strlen(OPNAME_AND)) == 0) {
         if (!sig2_filename) {
-            fprintf(stderr, "AND operator requires two input signals\n");
+            fprintf(stderr, OPNAME_AND " operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
         time = binary_operator_test(stl_and, sig1, sig2, result);
         print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
-    } else if (strncmp(formula, "OR", 2) == 0) {
+    } else if (strncmp(formula, OPNAME_OR, strlen(OPNAME_OR)) == 0) {
         if (!sig2_filename) {
-            fprintf(stderr, "OR operator requires two input signals\n");
+            fprintf(stderr, OPNAME_OR " operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
         time = binary_operator_test(stl_or, sig1, sig2, result);
         print_elapsed_time(formula, sig1_filename, sig2_filename, time);
     
-    } else if (strncmp(formula, "NOT", 3) == 0) {
+    } else if (strncmp(formula, OPNAME_NOT, strlen(OPNAME_NOT)) == 0) {
 
         time = unary_operator_test(stl_not, sig1, result);
         print_elapsed_time(formula, sig1_filename, sig2_filename, time);
     
-    } else if (strncmp(formula, "UNTIL", 5) == 0) {
+    } else if (strncmp(formula, OPNAME_UNTIL, strlen(OPNAME_UNTIL)) == 0) {
         if (!sig2_filename) {
-            fprintf(stderr, "UNTIL operator requires two input signals\n");
+            fprintf(stderr, OPNAME_UNTIL " operator requires two input signals\n");
             exit(EXIT_FAILURE);
         }
 
-        time = binary_operator_test(stl_until, sig1, sig2, result);
+        if (strlen(formula) > strlen(OPNAME_UNTIL)) {
+            if (sscanf(formula, OPNAME_UNTIL "_\[%f,%f\]", &lower_bound, &upper_bound) != 2) {
+                fprintf(stderr, "could not parse bound values for operator " 
+                                OPNAME_UNTIL "\n");
+                exit(EXIT_FAILURE);
+            } else {
+                time = binary_bound_operator_test(stl_buntil, sig1, sig2, 
+                                                  lower_bound, upper_bound, result);
+            }
+        } else {
+            time = binary_operator_test(stl_until, sig1, sig2, result);
+        }
+
+        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
+        
+    } else if (strncmp(formula, OPNAME_ALW, strlen(OPNAME_ALW)) == 0) {
+    
+        if (strlen(formula) > strlen(OPNAME_ALW)) {
+            if (sscanf(formula, OPNAME_ALW "_[%f,%f]", &lower_bound, &upper_bound) != 2) {
+                fprintf(stderr, "cound not parse bound values for operator "
+                                OPNAME_ALW "\n");
+                exit(EXIT_FAILURE);
+            } else {
+                fprintf(stdout, "parsed bounds: %f, %f\n", lower_bound, upper_bound);
+                time = unary_bound_operator_test(stl_balw, sig1, lower_bound, upper_bound, result);
+            }
+        } else {
+            time = unary_operator_test(stl_alw, sig1, result);
+        }
         print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
-    } else if (strncmp(formula, "ALW", 3) == 0) {
-    
-        time = unary_operator_test(stl_alw, sig1, result);
-        print_elapsed_time(formula, sig1_filename, sig2_filename, time);
+    } else if (strncmp(formula, OPNAME_EVTL, strlen(OPNAME_EVTL)) == 0) {
 
-    } else if (strncmp(formula, "EVTL", 4) == 0) {
-    
-        time = unary_operator_test(stl_evtl, sig1, result);
+        if (strlen(formula) > strlen(OPNAME_EVTL)) {
+            if (sscanf(formula, OPNAME_EVTL "_\[%f,%f\]", &lower_bound, &upper_bound) != 2) {
+                fprintf(stderr, "cound not parse bound values for operator "
+                                OPNAME_EVTL "\n");
+                exit(EXIT_FAILURE);
+            } else {
+                time = unary_bound_operator_test(stl_bevtl, sig1, lower_bound, upper_bound, result);
+            }
+        } else {
+            time = unary_operator_test(stl_evtl, sig1, result);
+        }
         print_elapsed_time(formula, sig1_filename, sig2_filename, time);
 
     } else {

@@ -148,9 +148,9 @@ TESTCASES_FILE="$MATLABTESTS_PATH/benchmarks/testcases"
 
 # select testcases
 if [ ! -z "$TEST_CASES" ] ; then
-    # remove leading ' ' and replace ' ' by '\|'
-    grep_arg=$(echo $TEST_CASES | sed 's/^ //' | sed 's/ /\\|/g')
-    TEST_CASES=$(grep -v '^#' | grep ":\($grep_arg\)\$" $TESTCASES_FILE)
+    # remove leading ' ', replace ' ' by '\|' and replace '[', ']' to '\[', '\]'
+    grep_arg=$(echo $TEST_CASES | sed -e 's/^ //' -e 's/ /\\|/g' -e 's/\]/\\\]/g;s/\[/\\\[/g')
+    TEST_CASES=$(grep -v '^#' $TESTCASES_FILE | grep ":\($grep_arg\)\$")
 
 elif $DO_ALL ; then
     TEST_CASES=$(grep -v '^#' $TESTCASES_FILE)
