@@ -182,13 +182,13 @@ for tc in $TEST_CASES ; do
     matlab_cmd="loadenv;"
     iter=$(($TC_ITERATIONS - 1))
     while [ $iter -gt 0 ] ; do
-        matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$operator');"
         iter=$(($iter - 1))
     done
     if $DO_NOT_WRITE && [ $s_count -ge 1 -a $b_count -ge 1 ] ; then
-        matlab_cmd="$matlab_cmd r = benchmark('$tcname');"
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$operator');"
     else
-        matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$test_filename', '$test_filename');"
+        matlab_cmd="$matlab_cmd r = benchmark('$tcname', '$operator', '$test_filename', '$test_filename');"
     fi
     matlab_cmd="$matlab_cmd exit(r)"
     

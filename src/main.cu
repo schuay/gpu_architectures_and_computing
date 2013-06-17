@@ -26,12 +26,12 @@ extern "C" {
 
 
 // define operator names (for commanline parsing)
-#define OPNAME_NOT      "NOT"
-#define OPNAME_AND      "AND"
-#define OPNAME_OR       "OR"
-#define OPNAME_ALW      "ALW"
-#define OPNAME_EVTL     "EVTL"
-#define OPNAME_UNTIL    "UNTIL"
+#define OPNAME_NOT      "not"
+#define OPNAME_AND      "and"
+#define OPNAME_OR       "or"
+#define OPNAME_ALW      "alw"
+#define OPNAME_EVTL     "ev"
+#define OPNAME_UNTIL    "until"
 
 
 #define checkCudaError(val) do { _checkCudaError((val), #val, __FILE__, __LINE__); } while (0)

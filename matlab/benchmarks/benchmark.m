@@ -1,4 +1,5 @@
-function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
+function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
+                                      resultFileName )
 % BENCHMARK runs the given benchmark and measures the time for it
 %   run the specified benchmark and measure the time breach
 %   needs for it
@@ -21,109 +22,120 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
     
     switch test
         case 'AND-1000'
-            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'and');
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         case 'AND-10000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), 'and');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), formula);
         case 'AND-100000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), 'and');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), formula);
         case 'AND-1000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), 'and');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), formula);
         case 'AND-5000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), 'and');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
             
         case 'OR-1000'
-            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'or');
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         case 'OR-10000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), 'or');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), formula);
         case 'OR-100000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), 'or');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), formula);
         case 'OR-1000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), 'or');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), formula);
         case 'OR-5000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), 'or');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
 
         case 'EVTL-1000'
-            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000 ), 'ev');
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000 ), formula);
         case 'EVTL-10000'
-            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000 ), 'ev');
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000 ), formula);
         case 'EVTL-100000'
-            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), 'ev');
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), formula);
         case 'EVTL-1000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000 ), 'ev');
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000 ), formula);
         case 'EVTL-5000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), 'ev');
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), formula);
+            
+        case 'EVTL_2_10-1000'
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000 ), formula);
+        case 'EVTL_10_100-10000'
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000 ), formula);
+        case 'EVTL_50_500-100000'
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), formula);
+        case 'EVTL_100_1000-1000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000 ), formula);
+        case 'EVTL_100_1000-5000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), formula);
             
         case 'ALW-1000'
-            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), 'alw');
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), formula);
         case 'ALW-10000'
-            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000), 'alw');
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000), formula);
         case 'ALW-100000'
-            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000), 'alw');
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000), formula);
         case 'ALW-1000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000), 'alw');
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000), formula);
         case 'ALW-5000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), 'alw');
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), formula);
             
           
         case 'UNTIL-1000'
-            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'until');
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         case 'UNTIL-10000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), 'until');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), formula);
         case 'UNTIL-100000'
-            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), 'until');
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), formula);
         case 'UNTIL-1000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), 'until');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), formula);
         case 'UNTIL-5000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), 'until');
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
 
             
         case 'AND-rand-1000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), 'and');
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'AND-rand-10000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(10000, 10), 'and');
+            [result, traj] = binary_op_test(Sys, createRandomSig(10000, 10), formula);
         case 'AND-rand-100000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(100000, 10), 'and');
+            [result, traj] = binary_op_test(Sys, createRandomSig(100000, 10), formula);
         case 'AND-rand-1000000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(1000000, 100), 'and');
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000000, 100), formula);
         case 'AND-rand-5000000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), 'and');
+            [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
         case 'OR-rand-1000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), 'or');
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'OR-rand-10000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(10000, 10), 'or');
+            [result, traj] = binary_op_test(Sys, createRandomSig(10000, 10), formula);
         case 'OR-rand-100000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(100000, 10), 'or');
+            [result, traj] = binary_op_test(Sys, createRandomSig(100000, 10), formula);
         case 'OR-rand-1000000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(1000000, 100), 'or');
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000000, 100), formula);
         case 'OR-rand-5000000'
-            [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), 'or');
+            [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
         case 'EVTL-rand-1000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), 'ev');
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'EVTL-rand-10000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), 'ev');
+            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), formula);
         case 'EVTL-rand-100000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), 'ev');
+            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), formula);
         case 'EVTL-rand-1000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), 'ev');
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), formula);
         case 'EVTL-rand-5000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), 'ev');
+            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
         case 'NOT-rand-1000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), 'not');
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'NOT-rand-10000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), 'not');
+            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), formula);
         case 'NOT-rand-100000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), 'not');
+            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), formula);
         case 'NOT-rand-1000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), 'not');
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), formula);
         case 'NOT-rand-5000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), 'not');
+            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
         
-        case 'AND_1_2-1000'
-            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), 'and');
+        case 'UNTIL_1_2-1000'
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         
             
         otherwise
@@ -135,7 +147,7 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
     printResult(test, result);
 
     
-    if nargin > 1
+    if nargin > 2
         [rows cols] = size(traj.X);
         
         for i = 1:rows
@@ -144,7 +156,7 @@ function [ returncode ] = benchmark ( test, signalFileNameBase, resultFileName )
         end
     end
     
-    if nargin > 2
+    if nargin > 3
         filename = sprintf('%s.breach.trace', resultFileName);
         writeSignal( filename, [ result.val.time ; result.val.X ] );
     end
