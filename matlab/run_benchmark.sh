@@ -23,6 +23,8 @@ function usage {
     echo "   -i num       number of iterations per test case"
     echo "                Breach is significant slower when executing it the first "
     echo "                time. so increase this number to run the test case more times"
+    echo "   -o           output report CSV file to matlab/benchmarks/ directory"
+    echo "                filename schema: bm_result_<hostname>_YYYYMMDD-HHMM.csv"
     echo "   -h           show help (this page)"
     echo ""
 }
@@ -43,7 +45,8 @@ DO_COMPARE=false
 DO_NOT_WRITE=false
 DO_REMOVE=false
 TC_ITERATIONS=1
-while getopts "hat:m:b:g:cnri:" opt ; do
+DO_REPORT=false
+while getopts "hat:m:b:g:cnri:o" opt ; do
     case $opt in 
         a)  
             DO_ALL=true
@@ -75,6 +78,10 @@ while getopts "hat:m:b:g:cnri:" opt ; do
 
         r)
             DO_REMOVE=true
+            ;;
+
+        o)
+            DO_REPORT=true
             ;;
 
         i)  
@@ -167,6 +174,14 @@ if [ ! -d "$TRACES_PATH" ] ; then
     mkdir -p $TRACES_PATH || failure "error creating directory for trace files"
 fi
 
+# temp file for time parsing
+out_file=$(mktemp /tmp/$(basename $0).XXXXXXX) || failure "could not create tmp file"
+
+if $DO_REPORT ; then
+    REPORT_FILE="$MATLABTESTS_PATH/benchmarks/bm_result_$(hostname)_$(date +'%Y%m%d_%H%M').csv"
+    echo "TESTCASE;BREACH;STL_BENCH" > $REPORT_FILE
+fi
+
 # test cases loop
 for tc in $TEST_CASES ; do
     operator=${tc%%:*}
@@ -192,11 +207,14 @@ for tc in $TEST_CASES ; do
     fi
     matlab_cmd="$matlab_cmd exit(r)"
     
-    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd" | tail -n +10
+    $MATLAB_BIN -nosplash -nodesktop -nojvm -r "$matlab_cmd" | tee $out_file | tail -n +10
     result=$?
 
     [ $result -eq 0 ] ||
         failure "error: test case $tc not defined. exiting"
+
+    breach_mean_time=$(awk 'BEGIN{i=0; o=0;} $1 ~ /Breach:/ {i++; o += $6; } END{if (i > 0) print o/i; else print -1; }' $out_file)
+    echo "Breach: resulting mean time: $breach_mean_time s"
 
     stl_bench_arg=""
     if ! $DO_NOT_WRITE ; then
@@ -206,7 +224,7 @@ for tc in $TEST_CASES ; do
         stl_bench_arg="$stl_bench_arg -c ${test_filename}.breach.trace"
     fi
 
-    $BENCH_BIN $stl_bench_arg $operator ${test_filename}_sig*.trace
+    $BENCH_BIN $stl_bench_arg $operator ${test_filename}_sig*.trace | tee $out_file
     result=$?
 
     [ $result -eq 0 ] ||
@@ -216,9 +234,12 @@ for tc in $TEST_CASES ; do
     iter=$(($TC_ITERATIONS - 1))
     while [ $iter -gt 0 ] ; do
         iter=$(($iter - 1))
-        $BENCH_BIN $operator ${test_filename}_sig*.trace
+        $BENCH_BIN $operator ${test_filename}_sig*.trace | tee -a $out_file
         [ $? -eq 0 ] || break
     done
+
+    bench_mean_time=$(awk 'BEGIN{i=0; o=0;} $1 ~ /stl_bench:/ {i++; o += $7; } END{if (i > 0) print o/i; else print -1; }' $out_file)
+    echo "stl_bench: resulting mean time: $bench_mean_time s"
 
     if $DO_REMOVE ; then
         rm -f ${test_filename}_sig*.trace 
@@ -226,11 +247,21 @@ for tc in $TEST_CASES ; do
         rm -f ${test_filename}.gpuac.trace
     fi
 
+    if $DO_REPORT ; then
+        echo "$tcname;$breach_mean_time;$bench_mean_time" >> $REPORT_FILE
+    fi
+
     echo 
 
 done
 
+rm -f $out_file
 
+if $DO_REPORT ; then
+    echo 
+    echo "written results to report file: $REPORT_FILE"
+    echo
+fi
 
 # change back to old directory
 if $DO_POPD ; then
