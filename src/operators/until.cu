@@ -199,7 +199,6 @@ seq_bin_internal(const sigpt_t *lhs,
 
 __global__ static void
 seq_z0(const sigpt_t *clhs,
-       const sigpt_t *crhs,
        const ivalpt_t *z2,
        const int n,
        ivalpt_t *out)
@@ -560,7 +559,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     /* *Sequentially* compute z0. */
 
     thrust::device_ptr<ivalpt_t> z0 = thrust::device_malloc<ivalpt_t>(nc);
-    seq_z0<<<1, 1>>>(clhs.get(), crhs.get(), z2.get(), nc, z0.get());
+    seq_z0<<<1, 1>>>(clhs.get(), z2.get(), nc, z0.get());
 
     thrust::device_free(crhs);
 
