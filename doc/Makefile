@@ -1,8 +1,12 @@
-PROJECT = protocol
+all: protocol presentation
 
 protocol:
-	pdflatex $(PROJECT)
-	pdflatex $(PROJECT)
+	pdflatex $@
+	pdflatex $@
+
+presentation:
+	pdflatex $@
+	pdflatex $@
 
 clean:
-	rm -f $(PROJECT).{aux,bbl,blg,dvi,log,out,pdf,ps,toc}
+	rm -f *.{aux,bbl,blg,dvi,log,out,pdf,ps,toc}
