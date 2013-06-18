@@ -33,10 +33,10 @@ or:OR-rand-10000
 or:OR-rand-100000
 or:OR-rand-1000000
 #or:OR-rand-5000000
-evtl:EVTL-rand-1000
-evtl:EVTL-rand-10000
-evtl:EVTL-rand-100000
-evtl:EVTL-rand-1000000
+ev:EVTL-rand-1000
+ev:EVTL-rand-10000
+ev:EVTL-rand-100000
+ev:EVTL-rand-1000000
 #evtl:EVTL-rand-5000000
 not:NOT-rand-1000
 not:NOT-rand-10000
