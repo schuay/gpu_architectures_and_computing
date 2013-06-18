@@ -63,18 +63,6 @@ struct sigpt_time_equals : public thrust::binary_function<sigpt_t, sigpt_t, bool
     }
 };
 
-/**
- * Computes the running maximum of the signal y
- * with the given window size.
- */
-__global__ static void
-bevtl_rmax(const sigpt_t *y,
-           const int window,
-           float *maxs,
-           const int n);
-
-#include <stdio.h> // TODO Remove me.
-
 static void
 time_to_idx_ofs(const thrust::device_ptr<sigpt_t> &in,
                 const int nin,
@@ -114,27 +102,12 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
     thrust::device_ptr<int> tofs_no_endp;
     time_to_idx_ofs(in, nin, in, nin, t, &tofs_no_endp);
 
-    /*thrust::host_vector<sigpt_t> h(in, in + nin);
-    sigpt_print("in", h.data(), nin);
-    thrust::host_vector<int> hs(sofs_no_endp, sofs_no_endp + nin);
-    thrust::host_vector<int> ht(tofs_no_endp, tofs_no_endp + nin);
-    for (int i = 0; i < nin; i++) {
-        printf("i: %d, t: %f, t+s: %f, i+s: %d\n", i, h[i].t, h[i].t + s, hs[i]);
-        printf("i: %d, t: %f, t+t: %f, i+t: %d\n", i, h[i].t, h[i].t + t, ht[i]);
-    }*/
-
     /* Calculate start and end points. */
     thrust::device_ptr<sigpt_t> sofs_points = thrust::device_malloc<sigpt_t>(nin);
     calc_ofs_points<<<NBLOCKS, NTHREADS>>>(in.get(), sofs_no_endp.get(), nin, s, sofs_points.get());
     thrust::device_ptr<sigpt_t> tofs_points = thrust::device_malloc<sigpt_t>(nin);
     calc_ofs_points<<<NBLOCKS, NTHREADS>>>(in.get(), tofs_no_endp.get(), nin, t, tofs_points.get());
 
-    /*thrust::host_vector<sigpt_t> hs(sofs_points, sofs_points + nin);
-    thrust::host_vector<sigpt_t> ht(tofs_points, tofs_points + nin);
-    sigpt_print("sofs", hs.data(), nin);
-    sigpt_print("tofs", ht.data(), nin);*/
-
-    thrust::device_free(sofs_no_endp);
     thrust::device_free(tofs_no_endp);
 
     /* Merge. */
@@ -154,50 +127,18 @@ stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
     /* Remove duplicate points. */
     int all_n = thrust::unique(all_points, all_points + 3 * nin, sigpt_time_equals()) - all_points;
 
-    thrust::host_vector<sigpt_t> a(all_points, all_points + all_n);
-    sigpt_print("all", a.data(), all_n);
-
     /* Get start and end indices of the windows, this time including intersections. */
     thrust::device_ptr<int> sofs;
     time_to_idx_ofs(all_points, all_n, in, nin, s, &sofs);
     thrust::device_ptr<int> tofs;
     time_to_idx_ofs(all_points, all_n, in, nin, t, &tofs);
 
-    /*thrust::host_vector<sigpt_t> h(in, in + nin);
-    sigpt_print("in", h.data(), nin);
-    thrust::host_vector<sigpt_t> h2(all_points, all_points + all_n);
-    sigpt_print("all_points", h2.data(), all_n);
-    thrust::host_vector<int> hs(sofs, sofs + nin);
-    thrust::host_vector<int> ht(tofs, tofs + nin);
-    for (int i = 0; i < nin; i++) {
-        printf("i: %d, t: %f, t+s: %f, i+s: %d\n", i, h[i].t, h[i].t + s, hs[i]);
-        printf("i: %d, t: %f, t+t: %f, i+t: %d\n", i, h[i].t, h[i].t + t, ht[i]);
-    }*/
-
     thrust::device_ptr<sigpt_t> final = thrust::device_malloc<sigpt_t>(nin);
 
     calc_win_max<<<NBLOCKS, NTHREADS>>>(in.get(), sofs.get(), tofs.get(), nin, all_points.get(), final.get());
 
-    thrust::host_vector<sigpt_t> hf(final, final + nin);
-    sigpt_print("out", hf.data(), nin);
-
     *out = final;
     *nout = nin;
-
-    /* TODO: calculate the evtl. */
-
-    //thrust::device_ptr<float> maxs = thrust::device_malloc<float>(nin);
-    //bevtl_rmax<<<NBLOCKS, NTHREADS>>>(in.get(), t - s + 1, maxs.get(), nin);
-
-    /* TODO: Remove me.
-    sigpt_print("in", h.data(), nin);
-
-    printf("maxs (s: %d, t: %d)\n", s, t);
-    for (int i = 0; i < nin; i++) {
-        const float f = maxs[i];
-        printf("%d: %f\n", i, f);
-    }
-    */
 
     thrust::device_free(sofs);
     thrust::device_free(tofs);
@@ -339,43 +280,5 @@ extract_count(const idx_time *in,
     for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
         out[i] = in[i].count;
         outi[i] = ! in[i].count;
-    }
-}
-
-__global__ static void
-bevtl_rmax(const sigpt_t *y,
-           const int window,
-           float *maxs,
-           const int n)
-{
-    const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-    /* TODO: Optimization potential: Cache points in __shared__ memory,
-     * and use a logarithmic MAX scheme:
-     * this.max = MAX(this.y, this+1.y);
-     * this.max = MAX(this.max, this+2.max
-     * this.max = MAX(this.max, this+4.max
-     *
-     * A problem of this running max implementation is that it's dependent on
-     * the size of the window w: O(w * n / p) whereas the algorithm used in
-     * the paper is linear in the length of the signal.
-     *
-     * It also doesn't add new time points on intersections with 0 and
-     * any other magic that might be required of evtl.
-     */
-
-    for (int i = tid; i < n; i += blockDim.x * gridDim.x) {
-        float max = y[i].y;
-
-        for (int off = 1; off < window; off++) {
-            if (i + off >= n) {
-                continue;
-            }
-
-            const sigpt_t other = y[i + off];
-            max = CUDA_MAX(max, other.y);
-        }
-
-        maxs[i] = max;
     }
 }
