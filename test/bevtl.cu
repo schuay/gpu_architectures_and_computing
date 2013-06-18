@@ -1,5 +1,7 @@
 #include "operators/bevtl.hpp"
 
+#include "interpolate.hpp"
+
 extern "C" {
 #include <check.h>
 #include <stdio.h>
@@ -33,7 +35,7 @@ START_TEST(name) \
     int out_n = read_signal_file(SIG_PATH "/" fexpected, &out); \
     fail_unless(out_n != -1); \
  \
-    fail_unless(sigcmp(out, out_n, host_out.data(), host_out.size()) == 0); \
+    fail_unless(sigcmp_bevtl(out, out_n, host_out.data(), host_out.size()) == 0); \
     thrust::device_free(vout); \
  \
     free(in); \
@@ -56,6 +58,55 @@ START_TEST(test_sanity)
     free(a);
 }
 END_TEST
+
+int
+sigcmp_bevtl(const sigpt_t *lhs,
+             const int nlhs,
+             const sigpt_t *rhs,
+             const int nrhs)
+{
+    sigpt_t *lhs_new = (sigpt_t *) lhs;
+    int nlhs_new = nlhs;
+    sigpt_t *rhs_end = (sigpt_t *) (rhs + (nrhs - 1));
+    int nrhs_new = nrhs;
+
+    if (nlhs == 0 || nrhs == 0) {
+        return (nlhs != 0 || nrhs != 0);
+    }
+
+    /* Discard early breach results. */
+    for (; lhs_new->t < rhs->t && lhs_new < lhs + nlhs; lhs_new++) {
+        nlhs_new--;
+    }
+
+    if (nlhs_new == 0) {
+        return -1;
+    }
+
+    if (lhs_new != lhs && !FLOAT_EQUALS(lhs_new->t, rhs->t)) {
+        sigpt_t interpolated = interpolate(lhs_new - 1, lhs_new, rhs->t);
+        lhs_new--;
+        nlhs_new++;
+        *lhs_new = interpolated;
+    }
+
+    /* Discard our own late results. */
+    for (; rhs_end->t > lhs[nlhs - 1].t && rhs_end >= rhs; rhs_end--) {
+        nrhs_new--;
+    }
+
+    if (nrhs_new == 0) {
+        return -1;
+    }
+
+    if (rhs_end != (rhs + (nrhs - 1)) && !FLOAT_EQUALS(lhs[nlhs - 1].t, rhs_end->t)) {
+        sigpt_t interpolated = interpolate(rhs_end, rhs_end + 1, lhs[nlhs - 1].t);
+        nrhs_new++;
+        *(rhs_end + 1) = interpolated;
+    }
+
+    return sigcmp(lhs_new, nlhs_new, rhs, nrhs_new);
+}
 
 BEVTL_TEST(test_sig1, 0.5, 1.5, "sig05.trace", "bevtl_0.5_1.5_sig05.breach.trace")
 BEVTL_TEST(test_sig2, 0.5, 1.5, "sig06.trace", "bevtl_0.5_1.5_sig06.breach.trace")

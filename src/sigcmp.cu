@@ -5,9 +5,6 @@
 
 #include "interpolate.hpp"
 
-#define FLOAT_ROUGHLY_EQUALS(x, y) (fabs((x) - (y)) < 5e-5f)
-#define FLOAT_EQUALS(x, y) (fabs((x) - (y)) < 5e-5)
-
 int
 sigcmp(const sigpt_t *lhs,
        const int nlhs,
