@@ -76,7 +76,18 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'ALW-5000000'
             [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), formula);
             
-          
+         case 'ALW_2_10-1000'
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), formula);
+        case 'ALW_10_100-10000'
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000), formula);
+        case 'ALW_50_500-100000'
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000), formula);
+        case 'ALW_100_1000-1000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000), formula);
+        case 'ALW_100_1000-5000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), formula);
+            
+         
         case 'UNTIL-1000'
             [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         case 'UNTIL-10000'
@@ -88,7 +99,18 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'UNTIL-5000000'
             [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
 
-            
+        case 'UNTIL_2_10-1000'
+            [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
+        case 'UNTIL_10_100-10000'
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 10000), formula);
+        case 'UNTIL_50_500-100000'
+            [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), formula);
+        case 'UNTIL_100_1000-1000000'
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), formula);
+        case 'UNTIL_100_1000-5000000'
+            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
+
+        
         case 'AND-rand-1000'
             [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'AND-rand-10000'
