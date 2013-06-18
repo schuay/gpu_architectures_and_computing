@@ -192,47 +192,45 @@ seq_bin_internal(const sigpt_t *lhs,
     *nout = l;
 }
 
-static void
-seq_z0(const thrust::device_ptr<sigpt_t> &clhs,
-       const thrust::device_ptr<sigpt_t> &crhs,
-       const thrust::device_ptr<ivalpt_t> &z2,
+/**
+ * Sequentially calculate z0. The first version actually ran on the host,
+ * but that turned out to be much slower than just using a single GPU thread.
+ */
+
+__global__ static void
+seq_z0(const sigpt_t *clhs,
+       const sigpt_t *crhs,
+       const ivalpt_t *z2,
        const int n,
-       thrust::device_ptr<ivalpt_t> out)
+       ivalpt_t *out)
 {
-    assert(n > 0);
-
-    /* Host arrays for sequential impl. */
-    thrust::host_vector<sigpt_t> hlhs(clhs, clhs + n);
-    thrust::host_vector<sigpt_t> hrhs(crhs, crhs + n);
-    thrust::host_vector<ivalpt_t> hz2(z2, z2 + n);
-
     /* The final point is simply FALSE. */
-    sigpt_t z0 = (sigpt_t){ hlhs[n - 1].t, -INFINITY, 0.f };
+    sigpt_t z0 = (sigpt_t){ clhs[n - 1].t, -INFINITY, 0.f };
 
     ivalpt_t ival;
     ival.i = n - 1;
     ival.n = 1;
-    ival.pts[0] = (sigpt_t){ hlhs[n - 1].t, z0.y, 0.f };
+    ival.pts[0] = (sigpt_t){ clhs[n - 1].t, z0.y, 0.f };
     out[n - 1] = ival;
 
     for (int i = n - 2; i >= 0; i--) {
         sigpt_t z3;
 
-        if (hlhs[i].dy <= 0) {
-            const sigpt_t z3lhs = (sigpt_t){ hlhs[i].t, hlhs[i + 1].y, 0.f };
+        if (clhs[i].dy <= 0) {
+            const sigpt_t z3lhs = (sigpt_t){ clhs[i].t, clhs[i + 1].y, 0.f };
             z3 = seq_bin_and(z3lhs, z0);
         } else {
-            z3 = seq_bin_and(hlhs[i], z0);
+            z3 = seq_bin_and(clhs[i], z0);
         }
 
         /* Transfer sequential results back to device memory. */
         ival.i = i;
         ival.n = 2;
-        ival.pts[0] = (sigpt_t){ hlhs[i].t, z0.y, 0.f };
-        ival.pts[1] = (sigpt_t){ hlhs[i + 1].t, z0.y, 0.f };
+        ival.pts[0] = (sigpt_t){ clhs[i].t, z0.y, 0.f };
+        ival.pts[1] = (sigpt_t){ clhs[i + 1].t, z0.y, 0.f };
         out[i] = ival;
 
-        z0 = seq_bin_or(hz2[i].pts[0], z3);
+        z0 = seq_bin_or(z2[i].pts[0], z3);
     }
 }
 
@@ -562,7 +560,7 @@ stl_until(const thrust::device_ptr<sigpt_t> &lhs,
     /* *Sequentially* compute z0. */
 
     thrust::device_ptr<ivalpt_t> z0 = thrust::device_malloc<ivalpt_t>(nc);
-    seq_z0(clhs, crhs, z2, nc, z0);
+    seq_z0<<<1, 1>>>(clhs.get(), crhs.get(), z2.get(), nc, z0.get());
 
     thrust::device_free(crhs);
 
