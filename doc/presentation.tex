@@ -38,18 +38,29 @@
 \end{frame}
 
 \begin{frame}
-\frametitle{Problem Statement}
-% What was our objective?
+\frametitle{Objectives}
+Parallelize all STL operators!
 \end{frame}
 
 \begin{frame}
 \frametitle{Work Division}
-% Who did what? How did we plan?
+\begin{itemize}
+\item A lightweight on-the-fly plan
+\item Organized through the bitbucket issue tracker
+\item Jakob: Test suite, AND, UNTIL
+\item Mino: EVTL, BEVTL
+\item Bernhard: Benchmark framework, Matlab integration
+\end{itemize}
 \end{frame}
 
 \begin{frame}
 \frametitle{Testing and Benchmarks}
-% How?
+\begin{itemize}
+\item CTest: Integration into build system
+\item Check: Test framework
+\item One test suite per operator
+\item Comparison against Breach results
+\end{itemize}
 \end{frame}
 
 \begin{frame}
