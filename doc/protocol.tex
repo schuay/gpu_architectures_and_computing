@@ -584,6 +584,70 @@ Lastly, the intervals in $result$ are merged into one final signal.
 
 \subsubsection{BEVTL}
 
+The sequential BEVTL algorithm uses an efficient running maximum calculation to
+achieve linear time complexity. Adapting this running maximum for parallel execution
+turned out to be infeasible as it would have quadratic space complexity.
+
+The current parallel BEVTL algorithm has thus a run time complexity of $O(f(n,p,w))$,
+where $w$ is the size of the window used.
+
+While the breach reference implementation uses every point $t$ from the original
+signal as the starting point of a window and then stores the maximum over that window
+at the point $t - s$, the parallel implementation stores the maximum for the window
+starting at $t + s$ at $t$. This leads to the two implementations generating disjoint
+result signals. However, the values the parallel implementation calculates are
+correct.
+
+The primary reason not to perform the BEVTL the same way Breach does is that we
+initially assumed, that the start and end points of a signal do not change. This
+calculation would have violated this assumption and would have required changes to
+all operators.
+
+\begin{figure}[H]
+\begin{lstlisting}
+void
+stl_bevtl(const thrust::device_ptr<sigpt_t> &in,
+          const int nin,
+          const float s,
+          const float t,
+          thrust::device_ptr<sigpt_t> *out,
+          int *nout);
+\end{lstlisting}
+\caption{
+\label{fig:parallel_bevtl}
+The BEVTL interface.}
+\end{figure}
+
+For the given signal $in$, we calculate $\Bevtl in$, where $I = [s,t]$.
+
+\begin{lstlisting}
+start_points = calc_ofs_points(in, s);
+end_points = calc_ofs_points(in, t);
+
+all = merge(in, start_points, end_points);
+all = unique(all);
+\end{lstlisting}
+
+The implementation first calculates the window start and end points and merges them
+with the original signal, while eliminating all duplicate points.
+
+\begin{lstlisting}
+
+start_idx = get_ofs_idx(in, s, all);
+end_idx = get_ofs_idx(in, t, all);
+
+parallel for i in [0 .. in.length] {
+    out[i] = max_from_to(start_idx[i], end_idx[i], all);
+}
+
+\end{lstlisting}
+
+Then, for all points in $in$ the indices of the according window's start and end
+points in $all$ are calculated. Lastly, for each point $i$ in $in$ the maximum of the
+points between $start\_idx[i]$ and $end\_idx[i]$ in $all$ is calculated and stored in
+$out[i]$. While the calculations for each point are performed in parallel, the
+running time of each thread depends on the size of the window.
+
 % Who did what? Challenges? ... ?
 
 \section{Results}
