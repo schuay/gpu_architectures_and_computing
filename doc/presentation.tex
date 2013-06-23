@@ -66,6 +66,35 @@ Parallelize all STL operators!
 \begin{frame}
 \frametitle{Initial Plan}
 % What did we initially want to do?
+\begin{itemize}
+\item Primitive operators
+\begin{itemize}
+\item NOT - done
+\item AND - done
+\item unbounded EVTL - done
+\item unbounded UNTIL - partially done
+\item bounded EVTL - done
+\end{itemize}
+\item Test suite - done
+\item Benchmarking - done
+\item Parser integration - not done
+\item Optimization - not done
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Problems}
+\begin{itemize}
+\item Getting the breach reference implementation to work and to produce results for
+        comparison was difficult.
+\item Some operators very hard to parallelize
+\begin{itemize}
+\item Fully parallelize UNTIL needs infinite amount of memory
+\item Even partial parallelization of UNTIL very difficult
+\item Running time of parallel BEVTL depends on the window size
+\end{itemize}
+\item Floating point calculations very inaccurate, best accuracy: $5*10^{-5}$.
+\end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -74,7 +103,7 @@ Parallelize all STL operators!
 \item NOT trivially parallelizable
 \item AND, EVTL involved, but possible in $O(f(n,p))$
 \item UNTIL mostly possible, but one sequential part remains
-\item EVTL parallelizable, but dependent on window size $O(f(n,p,w))$
+\item BEVTL parallelizable, but dependent on window size $O(f(n,p,w))$
 \end{itemize}
 % Also, why we ended up with less than planned, what were the difficulties?
 \end{frame}
