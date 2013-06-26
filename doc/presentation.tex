@@ -1,4 +1,4 @@
-\documentclass[notes=show]{beamer}
+\documentclass{beamer}
 
 \usepackage{comment}
 \usepackage{default}
@@ -153,6 +153,12 @@
         Benchmark result: AND Operator}
 \end{figure}
 \end{frame}
+\note{
+AND Benchmarks \\
+* Logarithmic scale \\
+* 2 Test sets in one: Left side regular signal, Right side random \\
+* CUDA ~ 1 order of magnitude lower.
+}
 
 \begin{frame}
 \frametitle{Benchmarks - EVTL}
@@ -163,6 +169,9 @@
         Benchmark result: EVTL Operator}
 \end{figure}
 \end{frame}
+\note{
+Unbounded EVTL: Similar behavior to AND.
+}
 
 \begin{frame}
 \frametitle{Benchmarks - UNTIL}
@@ -173,6 +182,10 @@
         Benchmark result: UNTIL Operator}
 \end{figure}
 \end{frame}
+\note{
+First problematic operator \\
+* Complexity the same as breach since our implementation uses a sequential component
+}
 
 \begin{frame}
 \frametitle{Benchmarks - BEVTL}
@@ -183,6 +196,13 @@
         Benchmark result: BEVTL Operator}
 \end{figure}
 \end{frame}
+\note{
+* Diagram might be misleading since window size increases together with n \\
+* Fully parallel, so I'd expect much better performance if the number of points within a window
+  stayed roughly constant \\
+* Breach crashed with larger data sets \\
+* 1 mil set also exceeds the GPU memory capacity
+}
 
 \begin{frame}
 \frametitle{Lessons Learned}
@@ -193,6 +213,15 @@
 \item Ensure task is possible before barging in
 \end{itemize}
 \end{frame}
+\note{
+* Benchmarks: to know which components need optimization and how they compare with 
+  a reference implementation \\
+* Floats: Problems comparing for equality because of introduced rounding errors \\
+* POC: For the more difficult operators, it helped to start with a simple sequential implementation
+  to check the algorithm for correctness and replace it bit by bit with parallel algorithms. \\
+* Task possible: Nice to know (or have a good idea) whether the project is possible instead of 
+  finding out in the middle that parts won't work.
+}
 
 \begin{frame}
 \frametitle{Future Tasks}
@@ -203,6 +232,16 @@
 \item Processing entire formulas
 \item Arbitrary expressions in input formulas
 \end{itemize}
+\end{frame}
+\note{
+* Find scalable UNTIL/BEVTL implementations, or provide impossibility proof. \\
+* Adapt our algorithms to multiple GPUs \\
+* No time to optimize operators, I'm sure performance could still be improved \\
+* Process entire formulas instead of operators only
+}
+
+\begin{frame}
+\frametitle{The End}
 \end{frame}
 
 \end{document}
