@@ -225,6 +225,10 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'UNTIL_1_2-1000'
             [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         
+	%% test with various bounds
+	case 'EVTL_B_Test-100000'
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), formula);
+        
             
         otherwise
             returncode = 1;
