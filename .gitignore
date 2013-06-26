@@ -6,3 +6,4 @@ matlab/benchmarks/traces/*
 
 # ignore eclipse project files
 .*project
+doc/.~lock*
