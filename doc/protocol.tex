@@ -716,12 +716,12 @@ The second signal type was used for testing unary operators, mainly $EVENTUALLY$
         Benchmark signal: sig3, ALWAYS, EVENTUALLY.}
 \end{figure}
 
-For our tests we used signals with 1.000, 10.000, 100.000, 1.000.000 and 5.000.000 points. Also some signal parameter where adjusted (e.g. the number of iterations...). 
-Additionally to these benchmarks we created also test cases with random signals, thus signals with a defined number of points and random amplitude values. 
+For our tests we used signals with 1.000, 10.000, 100.000, 1.000.000 and 5.000.000 points. Also some signal parameters where adjusted (e.g. the number of iterations). 
+Additionally to these benchmarks we created also test cases with a defined number of points and random amplitude values. 
 
-To distinguish easily between those test cases we introduced the following naming schema for test cases: test cases with defined signal types: $[operator name]-[number of points]$ and for the randomly generated test cases: $[operator name]-rand-[number of points]$.
+To distinguish easily between those test cases we introduced the following naming schema for test cases: test cases with defined signal types: \emph{[operator name]-[number of points]} and for the randomly generated test cases: \emph{[operator name]-rand-[number of points]}.
 
-The benchmarks where executed in the following way, which is implemented in the Bash script $MATLAB/run_benchmark.sh$:
+The benchmarks where executed in the following way, which is implemented in the Bash script \verb|MATLAB/run_benchmark.sh|:
 \begin{itemize}
 	\item generate signals with MATLAB 
 	\item run Breach implementation on the signals
@@ -775,7 +775,7 @@ The following table shows the resulting times for the benchmark of signal type o
 	\label{tab: bechmark results signal type1}
 \end{center}
 
-For some test cases were not possible. For those missing for Breach, MATLAB simply crashed with a
+Some test cases could not be executed. For those missing for Breach, MATLAB simply crashed with a
 {\it segfault} or similar error. Our CUDA implementation aborts whenever the GPU's memory
 limitations are exceeded.
 
