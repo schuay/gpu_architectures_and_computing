@@ -674,40 +674,47 @@ on the window size (= the bounds) as well as the signal length.
 
 % TODO: Say something about benchmark results either here or in the next section.
 
-\subsection{Benchmarks}
+\subsection{Benchmark setup}
 
 The benchmarks were executed on host '{\it bellum}', provided by the institute. This machine is equipped with a {\it Intel Core2 Quad Q9550 @ 2.83GHz}, {\it 8GB RAM} and a {\it Nvidea GeForce GTX 670}. The {\it GeForce GTX 670} card has the following specification:
 
-% TODO put this in a table
-\begin{lstlisting}
-  CUDA Driver Version / Runtime Version          5.5 / 5.0
-  CUDA Capability Major/Minor version number:    3.0
-  Total amount of global memory:                 4096 MBytes
-  ( 7) Multiprocessors x (192) CUDA Cores/MP:    1344 CUDA Cores
-  GPU Clock rate:                                980 MHz
-  L2 Cache Size:                                 524288 bytes
-  Total amount of constant memory:               65536 bytes
-  Total amount of shared memory per block:       49152 bytes
-  Total number of registers available per block: 65536
-  Warp size:                                     32
-\end{lstlisting}
+\begin{center}
+	\begin{tabular}{ll}
+      CUDA Driver Version / Runtime Version          & 5.5 / 5.0 \\
+      CUDA Capability Major/Minor version number:    & 3.0 \\
+      Total amount of global memory:                 & 4096 MBytes \\
+      ( 7) Multiprocessors x (192) CUDA Cores/MP:    & 1344 CUDA Cores \\
+      GPU Clock rate:                                & 980 MHz \\
+      L2 Cache Size:                                 & 524288 bytes\\
+      Total amount of constant memory:               & 65536 bytes \\
+      Total amount of shared memory per block:       & 49152 bytes \\
+      Total number of registers available per block: & 65536 \\
+      Warp size:                                     & 32 \\
+	\end{tabular}
+	\label{tab: GPU specifications}
+\end{center}
 
 Our code was compiled with and tested with the {\it CUDA Development Toolkit 5.0} (exact $nvcc$ version: {\it Cuda compilation tools, release 5.0, V0.2.1221}). This toolkit comes with a {\it Thrust version 1.5.3}.
 
 For running the benchmarks we created test signals with matlab. We used two different signal types, with varying granularity, thus different amount of point per signal. 
 The first signal type consist of two signals, which were used for testing binary operators ($AND$, $OR$, $UNTIL$). These signal pair (sig 1 and sig 2) was designed to generate a varying robustness signal for these operators.
 These signals and the resulting signals for the $AND$ and $UNTIL$ operators are show in figure \ref{fig:sig1_sig2_and_until}
-\begin{center}
+
+\begin{figure}[H]
     \includegraphics[scale=0.3]{bm_sig1_and_until.png}
-%    \captionof{Benchmark signals: sig1, sig2, AND, UNTIL}
-    \label{fig:sig1_sig2_and_until}
-\end{center}    
+    \caption{
+        \label{fig:sig1_sig2_and_until}
+        Benchmark signals: sig1, sig2, AND, UNTIL}
+\end{figure} 
+   
 The second signal type was used for testing unary operators, mainly $EVENTUALLY$ and $ALWAYS$. The decreasing amplitude of this signal ensures that the resulting robustness signals for these operators also vary as much as possible. This signal (sig 3) together with the resulting signals for $EVENTUALLY$ and $ALWAYS$ are shown in figure \ref{fig:sig3_evtl_alw}
-\begin{center}
+
+\begin{figure}[H]
     \includegraphics[scale=0.3]{bm_sig3_ev_alw.png}
-%    \captionof{Benchmark signal: sig3, ALWAYS, EVENTUALLY}
-    \label{fig:sig3_evtl_alw}
-\end{center}
+    \caption{
+        \label{fig:sig3_evtl_alw}
+        Benchmark signal: sig3, ALWAYS, EVENTUALLY.}
+\end{figure}
 
 For our tests we used signals with 1.000, 10.000, 100.000, 1.000.000 and 5.000.000 points. Also some signal parameter where adjusted (e.g. the number of iterations...). 
 Additionally to these benchmarks we created also test cases with random signals, thus signals with a defined number of points and random amplitude values. 
@@ -723,11 +730,163 @@ The benchmarks where executed in the following way, which is implemented in the 
 	\item (optionally) do a compare of the resulting signal of CUDA implementation and Breach code
 \end{itemize}
 
-We tried to only measure the time of the robustness calculation. For the Breach implementation we used the $tic$, $toc$ functions from Matlab, directly before and after the calculation function. For our CUDA implementation we created a benchmark tool called $stl_bench$ which measures the elapsed time directly before and after the call to the calculation function, by using the CUDA Event functions.
+We tried to only measure the time of the robustness calculation. For the Breach implementation we used the $tic$, $toc$ functions from Matlab, directly before and after the calculation function. For our CUDA implementation we created a benchmark tool called $stl\_bench$ which measures the elapsed time directly before and after the call to the calculation function, by using the CUDA Event functions.
 
 To get more reliable results the robustness calculation code was executed ten times on the same signal and the mean value was used as resulting time.
 
-% TODO: Test system specs, GPU, compiler version, benchmark mode (minimum of 10 runs),
+
+\subsection{Benchmark results}
+
+The following table shows the resulting times for the benchmark of signal type one (times given in seconds):
+
+\begin{center}
+	\begin{tabular}{| l | c || l | l | l | l |}
+	    \hline
+	    Impl & Operator & 1k points & 10k points & 100K points & 1M points \\
+	    \hline \hline
+	    Breach & AND & 0.0087071 & 0.0120728 & 0.0483881 & 0.445987 \\
+	    Cuda Impl & AND & 0.0024322 & 0.0022635 & 0.0057041 & 0.0296072 \\
+	    \hline \hline
+	    Breach & OR & 0.0086787 & 0.0117123 & 0.0480584 & 0.431688 \\
+	    Cuda Impl & OR & 0.0018672 & 0.0024147 & 0.0067005 & 0.0306646 \\
+	    \hline \hline   
+	    Breach & NOT & 0.0053513 & 0.0063594 & 0.0191254 & 0.164153 \\
+	    Cuda Impl & NOT & 0.000012 & 0.000012 & 0.0001248 & 0.0006089 \\
+	    \hline \hline   
+        Breach & EVTL & 0.0055339 & 0.0070002 & 0.020698 & 0.184379 \\
+        Cuda Impl & EVTL & 0.0008783 & 0.0007868 & 0.0014221 & 0.0047984 \\
+	    \hline \hline   
+        Breach & ALW & 0.0055429 & 0.0066054 & 0.0201779 & 0.183013 \\
+        Cuda Impl & ALW & 0.0008477 & 0.0008328 & 0.0019832 & 0.0054916 \\
+	    \hline \hline   
+        Breach & UNTIL & 0.0102001 & 0.025803 & 0.189978 & 1.87697 \\
+        Cuda Impl & UNTIL & 0.0066829 & 0.0273302 & 0.186818 & 1.73759 \\        
+	    \hline \hline   
+        Breach & bound EVTL & 0.0055599 & 0.0073029 & - & - \\
+        Cuda Impl & bound EVTL & 0.0074218 & 0.0272413 & 0.0018589 & 0.0018665 \\        
+	    \hline \hline   
+        Breach & bound ALW & 0.0055902 & 0.0073046 & - & - \\
+        Cuda Impl & bound ALW & 0.005902 & 0.0257203 & 0.0018165 & 0.0018002 \\        
+	    \hline \hline   
+        Breach & bound UNTIL & 0.0107293 & 0.0293894 & 0.22986 & - \\
+        Cuda Impl & bound UNTIL & - & - & - & - \\        
+	    \hline
+	\end{tabular}
+	\label{tab: bechmark results signal type1}
+\end{center}
+
+For some test cases were not possible. For those missing for Breach, matlab simply crashed with a
+{\it segfault} or similar error. Sometimes our CUDA implementation crashed on certain test cases. 
+This has to be analysed in more detail.
+
+The next table shows the benchmark results for the test cases with the randomized signals:
+
+\begin{center}
+	\begin{tabular}{| l | c || l | l | l | l |}
+	    \hline
+	    Impl & Operator & 1k points & 10k points & 100K points & 1M points \\
+	    \hline \hline
+	    Breach & AND & 0.0085973 & 0.0116511 & 0.050743 & 0.467298 \\
+	    Cuda Impl & AND & 0.0022236 & 0.0024326 & 0.0060476 & 0.030101  \\
+	    \hline \hline
+	    Breach & OR & 0.008603 & 0.0117123 & 0.0503169 & 0.472829  \\
+	    Cuda Impl & OR & 0.0019509 & 0.002225 & 0.0063485 & 0.0315681 \\
+	    \hline \hline   
+	    Breach & NOT & 0.0053446 & 0.0062473 & 0.0178425 & 0.156142 \\
+	    Cuda Impl & NOT & 0.0000352 & 0.0000229 & 0.0000954 & 0.0004093 \\
+	    \hline \hline   
+        Breach & EVTL & 0.0056138 & 0.0067862 & 0.0208511 & 0.182505  \\
+        Cuda Impl & EVTL & 0.0007995 & 0.0006942 & 0.0014816 & 0.0048978  \\
+	    \hline \hline   
+        Breach & ALW  & 0.005637 & 0.0067808 & 0.0205671 & 0.181198 \\
+        Cuda Impl & ALW & 0.0008801 & 0.0007204 & 0.0019321 & 0.0054665  \\
+	    \hline \hline   
+        Breach & UNTIL & 0.0102043 & 0.0266053 & 0.201771 & 1.99467  \\
+        Cuda Impl & UNTIL & 0.0067438 & 0.0369347 & 0.27222 & 2.67897  \\        
+	    \hline \hline   
+        Breach & bound EVTL & 0.0055204 & - & - & -  \\
+        Cuda Impl & bound EVTL  & 0.0075555 & 0.0141128 & 0.535884 & - \\        
+	    \hline \hline   
+        Breach & bound ALW  & 0.0055159 & - & - & - \\
+        Cuda Impl & bound ALW  & 0.0076358 & 0.0135661 & 0.533961 & - \\        
+	    \hline \hline   
+        Breach & bound UNTIL & 0.0104085 & - & - & - \\
+        Cuda Impl & bound UNTIL & - & - & - & - \\        
+	    \hline
+	\end{tabular}
+	\label{tab: bechmark results signal type2}
+\end{center}
+
+What we can directly see from these results, that there is no significant difference between
+these two signal types. The majority of the operators are working quite well on both on them. 
+However the bounded versions are more likely to crash on randomized signals. 
+
+The next few figures show these resulting times in a graphical way, on a logarithmic time scale (y).
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_and.png}
+    \caption{
+        \label{fig:bm_and}
+        Benchmark result: AND Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_or.png}
+    \caption{
+        \label{fig:bm_or}
+        Benchmark result: OR Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_not.png}
+    \caption{
+        \label{fig:bm_not}
+        Benchmark result: NOT Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_evtl.png}
+    \caption{
+        \label{fig:bm_evtl}
+        Benchmark result: EVTL Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_alw.png}
+    \caption{
+        \label{fig:bm_alw}
+        Benchmark result: ALW Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_until.png}
+    \caption{
+        \label{fig:bm_until}
+        Benchmark result: UNTIL Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_bevtl.png}
+    \caption{
+        \label{fig:bm_bevtl}
+        Benchmark result: Bound EVTL Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_balw.png}
+    \caption{
+        \label{fig:bm_balw}
+        Benchmark result: Bound ALW Operator}
+\end{figure}
+
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_buntil.png}
+    \caption{
+        \label{fig:bm_buntil}
+        Benchmark result: Bound UNTIL Operator}
+\end{figure}
+
+
 % benchmarks for all basic operators (NOT,AND,EVTL,UNTIL,BEVTL), graphs (runtime / size)
 
 \section{Further Work}

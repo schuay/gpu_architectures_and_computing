@@ -4,6 +4,9 @@
 \usepackage{default}
 \usepackage[utf8]{inputenc}
 \usepackage{listings}
+\usepackage{graphicx}
+
+\graphicspath{{./images/}}
 
 \definecolor{OliveGreen}{cmyk}{0.64,0,0.95,0.40}
 \definecolor{Gray}{gray}{0.5}
@@ -110,18 +113,42 @@ Parallelize all STL operators!
 
 \begin{frame}
 \frametitle{Benchmarks - AND}
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_and.png}
+    \caption{
+        \label{fig:bm_and}
+        Benchmark result: AND Operator}
+\end{figure}
 \end{frame}
 
 \begin{frame}
 \frametitle{Benchmarks - EVTL}
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_evtl.png}
+    \caption{
+        \label{fig:bm_evtl}
+        Benchmark result: EVTL Operator}
+\end{figure}
 \end{frame}
 
 \begin{frame}
 \frametitle{Benchmarks - UNTIL}
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_until.png}
+    \caption{
+        \label{fig:bm_until}
+        Benchmark result: UNTIL Operator}
+\end{figure}
 \end{frame}
 
 \begin{frame}
 \frametitle{Benchmarks - BEVTL}
+\begin{figure}[H]
+    \includegraphics[scale=0.5]{bm_bevtl.png}
+    \caption{
+        \label{fig:bm_bevtl}
+        Benchmark result: BEVTL Operator}
+\end{figure}
 \end{frame}
 
 \begin{frame}
