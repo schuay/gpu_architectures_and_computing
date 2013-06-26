@@ -116,6 +116,12 @@
 \item Parser integration - not done
 \item Optimization - not done
 \end{itemize}
+\note{
+* Primitive operators, everything else can be composed with them.
+* Couldn't parallelize UNTIL, see next slide.
+* Test suite/benchmarks considered more important
+* Parser integration/optimization not done due to time constraints.
+}
 \end{frame}
 
 \begin{frame}
@@ -131,6 +137,13 @@
 \end{itemize}
 \item Floating point calculations very inaccurate, best accuracy: $5*10^{-5}$.
 \end{itemize}
+\note{
+* It took us a lot of time to figure breach out.
+* As expected: some operators are hard/impossible to parallelize
+* Operators often very complex, many special cases when signals not equally sampled.
+* No good way to parallelize running maximum -> need to calculate for each window
+* Strange floating point results, bad compiler support.
+}
 \end{frame}
 
 \begin{frame}
@@ -142,6 +155,10 @@
 \item BEVTL parallelizable, but dependent on window size $O(f(n,p,w))$
 \end{itemize}
 % Also, why we ended up with less than planned, what were the difficulties?
+\note{
+* Problems took a lot of time -> no time for more than operators
+* AND relatively hard because of intersections
+}
 \end{frame}
 
 \begin{frame}
