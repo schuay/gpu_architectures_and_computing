@@ -43,6 +43,17 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'OR-5000000'
             [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
 
+        case 'NOT-1000'
+            [result, traj] = unary_op_test(Sys, createSig2( 10, 1000 ), formula);
+        case 'NOT-10000'
+            [result, traj] = unary_op_test(Sys, createSig2( 20, 10000 ), formula);
+        case 'NOT-100000'
+            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), formula);
+        case 'NOT-1000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000 ), formula);
+        case 'NOT-5000000'
+            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), formula);
+            
         case 'EVTL-1000'
             [result, traj] = unary_op_test(Sys, createSig2( 10, 1000 ), formula);
         case 'EVTL-10000'
@@ -59,11 +70,11 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'EVTL_10_100-10000'
             [result, traj] = unary_op_test(Sys, createSig2( 20, 10000 ), formula);
         case 'EVTL_50_500-100000'
-            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000 ), formula);
+            [result, traj] = dummy_test(createSig2( 40, 100000 ));  % matlab crashes with sigseg fault 
         case 'EVTL_100_1000-1000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000 ), formula);
+            [result, traj] = dummy_test(createSig2( 80, 1000000 ));  % matlab crashes with sigseg fault
         case 'EVTL_100_1000-5000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000 ), formula);
+            [result, traj] = dummy_test(createSig2( 80, 5000000 ));  % matlab crashes with sigseg fault
             
         case 'ALW-1000'
             [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), formula);
@@ -76,18 +87,17 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'ALW-5000000'
             [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), formula);
             
-         case 'ALW_2_10-1000'
+        case 'ALW_2_10-1000'
             [result, traj] = unary_op_test(Sys, createSig2( 10, 1000), formula);
         case 'ALW_10_100-10000'
             [result, traj] = unary_op_test(Sys, createSig2( 20, 10000), formula);
         case 'ALW_50_500-100000'
-            [result, traj] = unary_op_test(Sys, createSig2( 40, 100000), formula);
+            [result, traj] = dummy_test(createSig2( 40, 100000));  % matlab crashes with sigseg fault
         case 'ALW_100_1000-1000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 1000000), formula);
+            [result, traj] = dummy_test(createSig2( 80, 1000000));  % matlab crashes with sigseg fault
         case 'ALW_100_1000-5000000'
-            [result, traj] = unary_op_test(Sys, createSig2( 80, 5000000), formula);
+            [result, traj] = dummy_test(createSig2( 80, 5000000));  % matlab crashes with sigseg fault
             
-         
         case 'UNTIL-1000'
             [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
         case 'UNTIL-10000'
@@ -106,9 +116,10 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'UNTIL_50_500-100000'
             [result, traj] = binary_op_test(Sys, createSig1(10, 50, 100000), formula);
         case 'UNTIL_100_1000-1000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 1000000), formula);
+            [result, traj] = dummy_test(createSig1(20, 80, 1000000));  % matlab crashes with sigseg fault
         case 'UNTIL_100_1000-5000000'
-            [result, traj] = binary_op_test(Sys, createSig1(20, 80, 5000000), formula);
+            [result, traj] = dummy_test(createSig1(20, 80, 5000000));  % matlab crashes with sigseg fault
+
 
         
         case 'AND-rand-1000'
@@ -133,17 +144,6 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'OR-rand-5000000'
             [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
-        case 'EVTL-rand-1000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
-        case 'EVTL-rand-10000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), formula);
-        case 'EVTL-rand-100000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), formula);
-        case 'EVTL-rand-1000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), formula);
-        case 'EVTL-rand-5000000'
-            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
-            
         case 'NOT-rand-1000'
             [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
         case 'NOT-rand-10000'
@@ -155,6 +155,72 @@ function [ returncode ] = benchmark ( test, formula, signalFileNameBase,...
         case 'NOT-rand-5000000'
             [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
             
+        case 'EVTL-rand-1000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'EVTL-rand-10000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), formula);
+        case 'EVTL-rand-100000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), formula);
+        case 'EVTL-rand-1000000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), formula);
+        case 'EVTL-rand-5000000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
+            
+        case 'EVTL_2_10-rand-1000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'EVTL_10_100-rand-10000'
+            [result, traj] = dummy_test(createRandomSig(10000, 10));  % matlab crashes with sigseg fault 
+        case 'EVTL_50_500-rand-100000'
+            [result, traj] = dummy_test(createRandomSig(100000, 10));  % matlab crashes with sigseg fault 
+        case 'EVTL_100_1000-rand-1000000'
+            [result, traj] = dummy_test(createRandomSig(1000000, 100));  % matlab crashes with sigseg fault
+        case 'EVTL_100_1000-rand-5000000'
+            [result, traj] = dummy_test(createRandomSig(5000000, 100));  % matlab crashes with sigseg fault
+            
+        case 'ALW-rand-1000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'ALW-rand-10000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(10000, 10), formula);
+        case 'ALW-rand-100000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(100000, 10), formula);
+        case 'ALW-rand-1000000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000000, 100), formula);
+        case 'ALW-rand-5000000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(5000000, 100), formula);
+            
+        case 'ALW_2_10-rand-1000'
+            [result, traj] = unary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'ALW_10_100-rand-10000'
+            [result, traj] = dummy_test(createRandomSig(10000, 10));  % matlab crashes with sigseg fault
+        case 'ALW_50_500-rand-100000'
+            [result, traj] = dummy_test(createRandomSig(100000, 10));  % matlab crashes with sigseg fault
+        case 'ALW_100_1000-rand-1000000'
+            [result, traj] = dummy_test(createRandomSig(1000000, 100));  % matlab crashes with sigseg fault
+        case 'ALW_100_1000-rand-5000000'
+            [result, traj] = dummy_test(createRandomSig(5000000, 100));  % matlab crashes with sigseg fault
+            
+        case 'UNTIL-rand-1000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'UNTIL-rand-10000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(10000, 10), formula);
+        case 'UNTIL-rand-100000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(100000, 10), formula);
+        case 'UNTIL-rand-1000000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000000, 100), formula);
+        case 'UNTIL-rand-5000000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(5000000, 100), formula);
+            
+        case 'UNTIL_2_10-rand-1000'
+            [result, traj] = binary_op_test(Sys, createRandomSig(1000, 10), formula);
+        case 'UNTIL_10_100-rand-10000'
+            [result, traj] = dummy_test(createRandomSig(10000, 100));  % matlab out of mem error
+        case 'UNTIL_50_500-rand-100000'
+            [result, traj] = dummy_test(createRandomSig(100000, 100));  % matlab out of mem error
+        case 'UNTIL_100_1000-rand-1000000'
+            [result, traj] = dummy_test(createRandomSig(1000000, 100));  % matlab crashes with sigseg fault
+        case 'UNTIL_100_1000-rand-5000000'
+            [result, traj] = dummy_test(createRandomSig(5000000, 100));  % matlab crashes with sigseg fault
+
         
         case 'UNTIL_1_2-1000'
             [result, traj] = binary_op_test(Sys, createSig1(5, 25, 1000), formula);
@@ -233,4 +299,13 @@ function [result, t] = binary_op_test(Sys, sig1, op)
     traj.X = [ sig1.y1 ; sig1.y2 ];
     result = runTestCase(Sys, ['(s1[t] > 0) ' op ' (s2[t] > 0)'], traj);
     t = traj;
+end
+
+%% dummy test function, used if matlab would crash on this test
+function [result, t] = dummy_test(sig1)
+    t.time = sig1.t;
+    t.X = [ sig1.y1 ; sig1.y2 ];
+    result.time = -1;
+    result.val.time = [ 0 ];
+    result.val.X = [ 0 ];
 end
