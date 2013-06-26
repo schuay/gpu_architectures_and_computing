@@ -746,9 +746,6 @@ The following table shows the resulting times for the benchmark of signal type o
 	    \hline \hline
 	    Breach & AND & 0.0087071 & 0.0120728 & 0.0483881 & 0.445987 \\
 	    Cuda Impl & AND & 0.0024322 & 0.0022635 & 0.0057041 & 0.0296072 \\
-	    \hline \hline
-	    Breach & OR & 0.0086787 & 0.0117123 & 0.0480584 & 0.431688 \\
-	    Cuda Impl & OR & 0.0018672 & 0.0024147 & 0.0067005 & 0.0306646 \\
 	    \hline \hline   
 	    Breach & NOT & 0.0053513 & 0.0063594 & 0.0191254 & 0.164153 \\
 	    Cuda Impl & NOT & 0.000012 & 0.000012 & 0.0001248 & 0.0006089 \\
@@ -756,20 +753,11 @@ The following table shows the resulting times for the benchmark of signal type o
         Breach & EVTL & 0.0055339 & 0.0070002 & 0.020698 & 0.184379 \\
         Cuda Impl & EVTL & 0.0008783 & 0.0007868 & 0.0014221 & 0.0047984 \\
 	    \hline \hline   
-        Breach & ALW & 0.0055429 & 0.0066054 & 0.0201779 & 0.183013 \\
-        Cuda Impl & ALW & 0.0008477 & 0.0008328 & 0.0019832 & 0.0054916 \\
-	    \hline \hline   
         Breach & UNTIL & 0.0102001 & 0.025803 & 0.189978 & 1.87697 \\
         Cuda Impl & UNTIL & 0.0066829 & 0.0273302 & 0.186818 & 1.73759 \\        
 	    \hline \hline   
         Breach & bound EVTL & 0.0055599 & 0.0073029 & - & - \\
         Cuda Impl & bound EVTL & 0.0074218 & 0.0272413 & 1.25304 & - \\        
-	    \hline \hline   
-        Breach & bound ALW & 0.0055902 & 0.0073046 & - & - \\
-        Cuda Impl & bound ALW & 0.005902 & 0.0257203 & 0.0018165 & 0.0018002 \\        
-	    \hline \hline   
-        Breach & bound UNTIL & 0.0107293 & 0.0293894 & 0.22986 & - \\
-        Cuda Impl & bound UNTIL & - & - & - & - \\        
 	    \hline
 	\end{tabular}
 	\label{tab: bechmark results signal type1}
@@ -788,9 +776,6 @@ The next table shows the benchmark results for the test cases with the randomize
 	    \hline \hline
 	    Breach & AND & 0.0085973 & 0.0116511 & 0.050743 & 0.467298 \\
 	    Cuda Impl & AND & 0.0022236 & 0.0024326 & 0.0060476 & 0.030101  \\
-	    \hline \hline
-	    Breach & OR & 0.008603 & 0.0117123 & 0.0503169 & 0.472829  \\
-	    Cuda Impl & OR & 0.0019509 & 0.002225 & 0.0063485 & 0.0315681 \\
 	    \hline \hline   
 	    Breach & NOT & 0.0053446 & 0.0062473 & 0.0178425 & 0.156142 \\
 	    Cuda Impl & NOT & 0.0000352 & 0.0000229 & 0.0000954 & 0.0004093 \\
@@ -798,20 +783,11 @@ The next table shows the benchmark results for the test cases with the randomize
         Breach & EVTL & 0.0056138 & 0.0067862 & 0.0208511 & 0.182505  \\
         Cuda Impl & EVTL & 0.0007995 & 0.0006942 & 0.0014816 & 0.0048978  \\
 	    \hline \hline   
-        Breach & ALW  & 0.005637 & 0.0067808 & 0.0205671 & 0.181198 \\
-        Cuda Impl & ALW & 0.0008801 & 0.0007204 & 0.0019321 & 0.0054665  \\
-	    \hline \hline   
         Breach & UNTIL & 0.0102043 & 0.0266053 & 0.201771 & 1.99467  \\
         Cuda Impl & UNTIL & 0.0067438 & 0.0369347 & 0.27222 & 2.67897  \\        
 	    \hline \hline   
         Breach & bound EVTL & 0.0055204 & - & - & -  \\
         Cuda Impl & bound EVTL  & 0.0075555 & 0.0141128 & 0.535884 & - \\        
-	    \hline \hline   
-        Breach & bound ALW  & 0.0055159 & - & - & - \\
-        Cuda Impl & bound ALW  & 0.0076358 & 0.0135661 & 0.533961 & - \\        
-	    \hline \hline   
-        Breach & bound UNTIL & 0.0104085 & - & - & - \\
-        Cuda Impl & bound UNTIL & - & - & - & - \\        
 	    \hline
 	\end{tabular}
 	\label{tab: bechmark results signal type2}
@@ -855,13 +831,6 @@ The next few figures show these resulting times in a graphical way, on a logarit
     \caption{
         \label{fig:bm_bevtl}
         Benchmark result: Bound EVTL Operator}
-\end{figure}
-
-\begin{figure}[H]
-    \includegraphics[scale=0.5]{bm_buntil.png}
-    \caption{
-        \label{fig:bm_buntil}
-        Benchmark result: Bound UNTIL Operator}
 \end{figure}
 
 \section{Further Work}
