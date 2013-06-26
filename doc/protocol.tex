@@ -776,8 +776,8 @@ The following table shows the resulting times for the benchmark of signal type o
 \end{center}
 
 For some test cases were not possible. For those missing for Breach, MATLAB simply crashed with a
-{\it segfault} or similar error. Sometimes our CUDA implementation crashed on certain test cases. 
-This has to be analysed in more detail.
+{\it segfault} or similar error. Our CUDA implementation aborts whenever the GPU's memory
+limitations are exceeded.
 
 The next table shows the benchmark results for the test cases with the randomized signals:
 
@@ -819,7 +819,6 @@ The next table shows the benchmark results for the test cases with the randomize
 
 What we can directly see from these results, that there is no significant difference between
 these two signal types. The majority of the operators are working quite well on both on them. 
-However the bounded versions are more likely to crash on randomized signals. 
 
 The next few figures show these resulting times in a graphical way, on a logarithmic time scale (y).
 
