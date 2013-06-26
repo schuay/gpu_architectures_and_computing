@@ -37,12 +37,37 @@
 
 \begin{frame}
 \frametitle{Signal Temporal Logic}
+\begin{itemize}
+    \item describing timed behaviours of continuous systems (time discrete signals)
+    \item monitoring STL 
+          \begin{itemize}
+        	\item evaluate a satisfaction function of STL formula
+        	\item boolena semantic
+        	\item quantitative semantic, robustness of satisfation
+          \end{itemize}
+    \item based on
+          \begin{itemize}
+        	\item functions (like $\leq$ ), satisfaction of function
+        	\item logical operators (NOT, AND, OR), combining satisfactions
+        	\item temporal operators (UNTIL, EVENTUALLY, GLOBALLY), take timed behaviour into account
+          \end{itemize}
+\end{itemize}
 % Very brief recap
 \end{frame}
 
 \begin{frame}
 \frametitle{Objectives}
-Parallelize all STL operators!
+\begin{itemize}
+	\item reimplement the robustness calculation operators with CUDA
+	\begin{itemize}
+	    \item based on algorithms presented in paper \emph{Efficient Robust Monitoring for STL} (A. Donze, T. Ferrere, O. Maler)
+	    \item main task: find a efficient parallel solution for the operator implementation
+	    \item very challenging for some operators
+    \end{itemize}
+	\item main goal: be much faster than the reference implementation (Breach)
+	\item but always be as precise as the Breach
+	\item if possible: integrate the CUDA implementation in MATLAB (Breach)
+\end{itemize}
 \end{frame}
 
 \begin{frame}
@@ -52,7 +77,7 @@ Parallelize all STL operators!
 \item Organized through the bitbucket issue tracker
 \item Jakob: Test suite, AND, UNTIL
 \item Mino: EVTL, BEVTL
-\item Bernhard: Benchmark framework, Matlab integration
+\item Bernhard: AND, Benchmark framework, Matlab integration
 \end{itemize}
 \end{frame}
 
@@ -63,7 +88,15 @@ Parallelize all STL operators!
 \item Check: Test framework
 \item One test suite per operator
 \item Comparison against Breach results
+\item Benchmark framework: compare performance against Breach
+\begin{itemize}
+	\item test with various signal sizes
+	\item generated signals and random signals
 \end{itemize}
+\end{itemize}
+\begin{figure}[H]
+    \includegraphics[scale=0.3]{bm_sig3_ev_alw.png}
+\end{figure}
 \end{frame}
 
 \begin{frame}
@@ -144,7 +177,7 @@ Parallelize all STL operators!
 \begin{frame}
 \frametitle{Benchmarks - BEVTL}
 \begin{figure}[H]
-    \includegraphics[scale=0.5]{bm_bevtl.png}
+    \includegraphics[scale=0.4]{bm_bevtl.png}
     \caption{
         \label{fig:bm_bevtl}
         Benchmark result: BEVTL Operator}
